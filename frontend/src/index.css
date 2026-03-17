@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #000000;
+  --bg-surface: #050a12;
+  --bg-card: rgba(10, 18, 32, 0.70);
+  --bg-elevated: #0d1520;
+  --bg-nav: #000000;
+  --accent-primary: #2dd4bf;
+  --accent-hover: #14b8a6;
+  --accent-glow: #2dd4bf;
+  --accent-subtle: rgba(45, 212, 191, 0.08);
+  --accent-border: rgba(45, 212, 191, 0.15);
+  --accent-border-solid: rgb(45, 212, 191);
+  --text-primary: rgb(224, 247, 250);
+  --text-secondary: rgb(148, 163, 184);
+  --text-muted: rgb(100, 116, 139);
+  --text-accent: #2dd4bf;
+  --status-online: #2dd4bf;
+  --status-warning: #f59e0b;
+  --status-critical: #ef4444;
+  --status-offline: #475569;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-secondary);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--text-primary);
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050a12;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2dd4bf;
+  border-radius: 2px;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.3); }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse-badge {
+  animation: pulse-badge 1.5s ease-in-out infinite;
+}
