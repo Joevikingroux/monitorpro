@@ -67,3 +67,9 @@ docker-compose.override.yml
 # ── Logs ──────────────────────────────────────────────────────
 *.log
 logs/
+
+# ── Windows system files ─────────────────────────────────────
+desktop.ini
+
+# ── Build staging ────────────────────────────────────────────
+pcmonitor/
