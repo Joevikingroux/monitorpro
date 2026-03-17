@@ -24,8 +24,8 @@ async def get_db():
 
 
 async def init_db():
-    from app.models import User, Company, Machine, Metric, AlertRule, AlertEvent
-    from app.models import WindowsService, SoftwareInventory, EventLog
+    from app.models import User, Company, Machine, Metric, AlertRule, AlertEvent  # noqa: F401
+    from app.models import WindowsService, SoftwareInventory, EventLog  # noqa: F401
     from app.core.security import hash_password
 
     async with engine.begin() as conn:

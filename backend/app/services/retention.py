@@ -31,7 +31,7 @@ async def run_retention_cleanup():
 
             # Clean up data for deactivated companies older than retention period
             inactive_result = await db.execute(
-                select(Company).where(Company.is_active == False)
+                select(Company).where(Company.is_active == False)  # noqa: E712
             )
             for company in inactive_result.scalars().all():
                 machine_result = await db.execute(

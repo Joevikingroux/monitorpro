@@ -13,7 +13,7 @@ from app.models.machine import Machine
 from app.models.company import Company
 from app.models.alert import AlertRule, AlertEvent
 from app.schemas.alert import (
-    AlertRuleCreate, AlertRuleUpdate, AlertRuleResponse,
+    AlertRuleCreate, AlertRuleUpdate, AlertRuleResponse, AlertEventResponse,
 )
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
