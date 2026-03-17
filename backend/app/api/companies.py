@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,21 +7,20 @@ from app.core.security import get_current_user, generate_api_key, hash_api_key
 from app.models.user import User
 from app.models.company import Company
 from app.models.machine import Machine
-from app.models.alert import AlertEvent, AlertRule
+from app.models.alert import AlertEvent
 from app.schemas.alert import (
     CompanyCreate, CompanyUpdate, CompanyResponse, CompanyTokenResponse,
-    AlertEventResponse,
 )
 
 router = APIRouter(prefix="/api/companies", tags=["companies"])
 
 
-@router.get("/", response_model=List[CompanyResponse])
+@router.get("/", response_model=list[CompanyResponse])
 async def list_companies(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Company).where(Company.is_active == True))
+    result = await db.execute(select(Company).where(Company.is_active == True))  # noqa: E712
     companies = result.scalars().all()
 
     responses = []
@@ -35,7 +32,7 @@ async def list_companies(
 
         online_result = await db.execute(
             select(func.count(Machine.id)).where(
-                Machine.company_id == c.id, Machine.is_online == True
+                Machine.company_id == c.id, Machine.is_online == True  # noqa: E712
             )
         )
         online_count = online_result.scalar() or 0
@@ -45,8 +42,8 @@ async def list_companies(
             .join(Machine, AlertEvent.machine_id == Machine.id)
             .where(
                 Machine.company_id == c.id,
-                AlertEvent.resolved_at == None,
-                AlertEvent.acknowledged == False,
+                AlertEvent.resolved_at == None,  # noqa: E711
+                AlertEvent.acknowledged == False,  # noqa: E712
             )
         )
         alert_count = alert_result.scalar() or 0
@@ -104,7 +101,7 @@ async def get_company(
     )
     online_result = await db.execute(
         select(func.count(Machine.id)).where(
-            Machine.company_id == company_id, Machine.is_online == True
+            Machine.company_id == company_id, Machine.is_online == True  # noqa: E712
         )
     )
 
@@ -201,7 +198,7 @@ async def company_alerts(
         .join(Machine, AlertEvent.machine_id == Machine.id)
         .where(
             Machine.company_id == company_id,
-            AlertEvent.resolved_at == None,
+            AlertEvent.resolved_at == None,  # noqa: E711
         )
         .order_by(AlertEvent.triggered_at.desc())
         .limit(50)

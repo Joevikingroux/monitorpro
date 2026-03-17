@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Header
-from sqlalchemy import select, delete, func
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -27,7 +27,7 @@ router = APIRouter(prefix="/api/machines", tags=["machines"])
 async def register_machine(request: MachineRegisterRequest, db: AsyncSession = Depends(get_db)):
     token_hash = hash_api_key(request.company_token)
     result = await db.execute(
-        select(Company).where(Company.token_hash == token_hash, Company.is_active == True)
+        select(Company).where(Company.token_hash == token_hash, Company.is_active == True)  # noqa: E712
     )
     company = result.scalar_one_or_none()
     if not company:
@@ -54,7 +54,7 @@ async def register_machine(request: MachineRegisterRequest, db: AsyncSession = D
     return MachineRegisterResponse(machine_id=machine.id, api_key=api_key)
 
 
-@router.get("/", response_model=List[MachineResponse])
+@router.get("/", response_model=list[MachineResponse])
 async def list_machines(
     company_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
@@ -63,7 +63,7 @@ async def list_machines(
     query = select(Machine).options(selectinload(Machine.company))
     if company_id:
         query = query.where(Machine.company_id == company_id)
-    query = query.join(Company).where(Company.is_active == True)
+    query = query.join(Company).where(Company.is_active == True)  # noqa: E712
     result = await db.execute(query)
     machines = result.scalars().all()
 
@@ -133,7 +133,7 @@ async def delete_machine(
     return {"message": "Machine deleted"}
 
 
-@router.get("/{machine_id}/services", response_model=List[ServiceResponse])
+@router.get("/{machine_id}/services", response_model=list[ServiceResponse])
 async def get_services(
     machine_id: int,
     current_user: User = Depends(get_current_user),
@@ -148,7 +148,7 @@ async def get_services(
 @router.post("/{machine_id}/services")
 async def ingest_services(
     machine_id: int,
-    services: List[ServiceIngestRequest],
+    services: list[ServiceIngestRequest],
     machine: Machine = Depends(get_machine_by_api_key),
     db: AsyncSession = Depends(get_db),
 ):
@@ -160,7 +160,7 @@ async def ingest_services(
     return {"message": f"Ingested {len(services)} services"}
 
 
-@router.get("/{machine_id}/software", response_model=List[SoftwareResponse])
+@router.get("/{machine_id}/software", response_model=list[SoftwareResponse])
 async def get_software(
     machine_id: int,
     current_user: User = Depends(get_current_user),
@@ -175,7 +175,7 @@ async def get_software(
 @router.post("/{machine_id}/software")
 async def ingest_software(
     machine_id: int,
-    software: List[SoftwareIngestRequest],
+    software: list[SoftwareIngestRequest],
     machine: Machine = Depends(get_machine_by_api_key),
     db: AsyncSession = Depends(get_db),
 ):
@@ -187,7 +187,7 @@ async def ingest_software(
     return {"message": f"Ingested {len(software)} software items"}
 
 
-@router.get("/{machine_id}/event-logs", response_model=List[EventLogResponse])
+@router.get("/{machine_id}/event-logs", response_model=list[EventLogResponse])
 async def get_event_logs(
     machine_id: int,
     limit: int = 100,
@@ -206,7 +206,7 @@ async def get_event_logs(
 @router.post("/{machine_id}/event-logs")
 async def ingest_event_logs(
     machine_id: int,
-    events: List[EventLogIngestRequest],
+    events: list[EventLogIngestRequest],
     machine: Machine = Depends(get_machine_by_api_key),
     db: AsyncSession = Depends(get_db),
 ):

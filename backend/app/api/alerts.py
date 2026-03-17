@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
-from typing import Optional, List
+from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -14,13 +14,12 @@ from app.models.company import Company
 from app.models.alert import AlertRule, AlertEvent
 from app.schemas.alert import (
     AlertRuleCreate, AlertRuleUpdate, AlertRuleResponse,
-    AlertEventResponse,
 )
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
 
-@router.get("/rules", response_model=List[AlertRuleResponse])
+@router.get("/rules", response_model=list[AlertRuleResponse])
 async def list_rules(
     company_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
@@ -29,7 +28,7 @@ async def list_rules(
     query = select(AlertRule)
     if company_id:
         query = query.where(
-            (AlertRule.company_id == company_id) | (AlertRule.company_id == None)
+            (AlertRule.company_id == company_id) | (AlertRule.company_id == None)  # noqa: E711
         )
     result = await db.execute(query)
     rules = result.scalars().all()
@@ -106,7 +105,7 @@ async def delete_rule(
     return {"message": "Rule deleted"}
 
 
-@router.get("/events", response_model=List[AlertEventResponse])
+@router.get("/events")
 async def list_events(
     machine_id: Optional[int] = None,
     company_id: Optional[int] = None,
@@ -129,7 +128,7 @@ async def list_events(
     if severity:
         query = query.where(AlertRule.severity == severity)
     if acknowledged is not None:
-        query = query.where(AlertEvent.acknowledged == acknowledged)
+        query = query.where(AlertEvent.acknowledged == acknowledged)  # noqa: E712
     if from_dt:
         query = query.where(AlertEvent.triggered_at >= from_dt)
     if to_dt:
@@ -185,8 +184,8 @@ async def unresolved_events(
 ):
     result = await db.execute(
         select(func.count(AlertEvent.id)).where(
-            AlertEvent.resolved_at == None,
-            AlertEvent.acknowledged == False,
+            AlertEvent.resolved_at == None,  # noqa: E711
+            AlertEvent.acknowledged == False,  # noqa: E712
         )
     )
     count = result.scalar()
@@ -195,8 +194,8 @@ async def unresolved_events(
         select(func.count(AlertEvent.id))
         .join(AlertRule)
         .where(
-            AlertEvent.resolved_at == None,
-            AlertEvent.acknowledged == False,
+            AlertEvent.resolved_at == None,  # noqa: E711
+            AlertEvent.acknowledged == False,  # noqa: E712
             AlertRule.severity == "critical",
         )
     )

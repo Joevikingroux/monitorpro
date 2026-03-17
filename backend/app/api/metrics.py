@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func, text
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -54,7 +54,7 @@ async def ingest_batch(
     return {"message": f"Ingested {len(request.metrics)} metrics"}
 
 
-@router.get("/{machine_id}", response_model=List[MetricResponse])
+@router.get("/{machine_id}", response_model=list[MetricResponse])
 async def get_metrics(
     machine_id: int,
     from_dt: Optional[datetime] = Query(None, alias="from"),

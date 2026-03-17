@@ -1,14 +1,13 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import async_session
 from app.models.machine import Machine
 from app.models.metric import Metric
 from app.models.alert import AlertRule, AlertEvent
-from app.models.company import Company
 
 logger = logging.getLogger("pcmonitor.alert_engine")
 
@@ -29,7 +28,7 @@ async def run_alert_check():
 async def _check_machine_online_status(db: AsyncSession):
     threshold = datetime.now(timezone.utc) - timedelta(minutes=3)
     result = await db.execute(
-        select(Machine).where(Machine.is_online == True, Machine.last_seen < threshold)
+        select(Machine).where(Machine.is_online == True, Machine.last_seen < threshold)  # noqa: E712
     )
     for machine in result.scalars().all():
         machine.is_online = False
@@ -40,7 +39,7 @@ async def _check_machine_online_status(db: AsyncSession):
 async def _evaluate_alert_rules(db: AsyncSession):
     from app.services.notifier import send_alert_notification
 
-    result = await db.execute(select(AlertRule).where(AlertRule.enabled == True))
+    result = await db.execute(select(AlertRule).where(AlertRule.enabled == True))  # noqa: E712
     rules = result.scalars().all()
 
     for rule in rules:
@@ -67,7 +66,7 @@ async def _evaluate_alert_rules(db: AsyncSession):
                         select(AlertEvent).where(
                             AlertEvent.rule_id == rule.id,
                             AlertEvent.machine_id == machine.id,
-                            AlertEvent.resolved_at == None,
+                            AlertEvent.resolved_at == None,  # noqa: E711
                         )
                     )
                     if not existing.scalar_one_or_none():
@@ -93,7 +92,7 @@ async def _evaluate_alert_rules(db: AsyncSession):
                     select(AlertEvent).where(
                         AlertEvent.rule_id == rule.id,
                         AlertEvent.machine_id == machine.id,
-                        AlertEvent.resolved_at == None,
+                        AlertEvent.resolved_at == None,  # noqa: E711
                     )
                 )
                 for event in unresolved.scalars().all():
@@ -103,7 +102,7 @@ async def _evaluate_alert_rules(db: AsyncSession):
 
 
 async def _get_applicable_machines(db: AsyncSession, rule: AlertRule):
-    query = select(Machine).where(Machine.is_online == True)
+    query = select(Machine).where(Machine.is_online == True)  # noqa: E712
     if rule.machine_id:
         query = query.where(Machine.id == rule.machine_id)
     elif rule.company_id:
