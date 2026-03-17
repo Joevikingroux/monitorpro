@@ -124,17 +124,17 @@ Copy `.env.example` to `.env` and fill in:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `DB_PASSWORD` | PostgreSQL password | `str0ngP@ssw0rd` |
+| `DB_PASSWORD` | PostgreSQL password | *(set a strong password)* |
 | `SECRET_KEY` | JWT signing key (min 32 chars random) | `openssl rand -hex 32` |
-| `ADMIN_EMAIL` | Initial admin login email | `joe@numbers10.co.za` |
-| `ADMIN_PASSWORD` | Initial admin password (change after first login) | `ChangeMe123!` |
+| `ADMIN_EMAIL` | Initial admin login email | *(your email address)* |
+| `ADMIN_PASSWORD` | Initial admin password (change after first login) | *(set a strong password)* |
 | `SMTP_HOST` | SMTP server for email alerts | `smtp.gmail.com` |
 | `SMTP_PORT` | SMTP port | `587` |
-| `SMTP_USER` | SMTP username | `alerts@numbers10.co.za` |
-| `SMTP_PASSWORD` | SMTP password | `your_app_password` |
-| `SMTP_FROM` | From address for alert emails | `PCMonitor <alerts@numbers10.co.za>` |
-| `TELEGRAM_TOKEN` | Telegram bot token for alerts | `123456:ABC-DEF...` |
-| `DOMAIN` | Your VPS domain or IP | `monitor.numbers10.co.za` |
+| `SMTP_USER` | SMTP username | *(your SMTP email)* |
+| `SMTP_PASSWORD` | SMTP password | *(your app password)* |
+| `SMTP_FROM` | From address for alert emails | `PCMonitor <your@email.com>` |
+| `TELEGRAM_TOKEN` | Telegram bot token for alerts | *(from @BotFather)* |
+| `DOMAIN` | Your VPS domain or IP | `monitor.yourdomain.com` |
 | `RETENTION_DAYS` | Days to keep metric data | `90` |
 
 ---
@@ -142,8 +142,8 @@ Copy `.env.example` to `.env` and fill in:
 ## 🔐 Default Admin Credentials
 
 ```
-Email:    set via ADMIN_EMAIL in .env
-Password: set via ADMIN_PASSWORD in .env
+Email:    set via ADMIN_EMAIL in your .env file
+Password: set via ADMIN_PASSWORD in your .env file
 ```
 
 > **Change your password immediately after first login via Settings → Profile.**

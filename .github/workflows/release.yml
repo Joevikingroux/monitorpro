@@ -35,7 +35,7 @@ jobs:
         if: steps.check_tag.outputs.exists == 'false'
         run: |
           git config user.name "Numbers10 Bot"
-          git config user.email "joe@numbers10.co.za"
+          git config user.email "noreply@github.com"
           git tag -a ${{ steps.version.outputs.version }} \
             -m "Release ${{ steps.version.outputs.version }}"
           git push origin ${{ steps.version.outputs.version }}
