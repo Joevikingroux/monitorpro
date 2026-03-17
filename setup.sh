@@ -39,7 +39,7 @@ echo "[2/7] Working directory: $SCRIPT_DIR"
 # 3. Create .env from example if it doesn't exist
 if [ ! -f .env ]; then
     echo "[3/7] Creating .env from .env.example..."
-    cp .env.example .env
+    cp backend/.env.example .env
 
     # Generate random passwords
     DB_PASS=$(openssl rand -hex 16)
