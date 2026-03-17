@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -12,6 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+
+logger = logging.getLogger("pcmonitor.auth")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 security_scheme = HTTPBearer()
@@ -56,20 +59,27 @@ async def get_current_user(
     from app.models.user import User
 
     token = credentials.credentials
+    logger.info(f"Auth attempt - token prefix: {token[:20]}... length: {len(token)}")
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        logger.info(f"Token decoded OK - sub: {payload.get('sub')}, type: {payload.get('type')}, exp: {payload.get('exp')}")
         if payload.get("type") != "access":
+            logger.warning(f"Token type mismatch: got '{payload.get('type')}', expected 'access'")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
         user_id: int = payload.get("sub")
         if user_id is None:
+            logger.warning("Token has no 'sub' claim")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    except JWTError:
+    except JWTError as e:
+        logger.warning(f"JWT decode failed: {e}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
+        logger.warning(f"User lookup failed for id={user_id}, found={user is not None}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    logger.info(f"Auth success - user: {user.email}")
     return user
 
 

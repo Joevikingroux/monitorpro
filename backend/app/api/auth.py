@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,20 +14,24 @@ from app.core.security import (
 from app.models.user import User
 from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, ChangePasswordRequest
 
+logger = logging.getLogger("pcmonitor.auth")
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=TokenResponse)
 async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+    logger.info(f"Login attempt for: {request.email}")
     result = await db.execute(select(User).where(User.email == request.email))
     user = result.scalar_one_or_none()
     if not user or not verify_password(request.password, user.hashed_password):
+        logger.warning(f"Login failed for: {request.email}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
 
     access_token = create_access_token({"sub": user.id})
     refresh_token = create_refresh_token({"sub": user.id})
+    logger.info(f"Login OK - user_id: {user.id}, token prefix: {access_token[:20]}...")
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
@@ -47,6 +53,14 @@ async def refresh(request: RefreshRequest, db: AsyncSession = Depends(get_db)):
     access_token = create_access_token({"sub": user.id})
     refresh_token = create_refresh_token({"sub": user.id})
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+
+
+@router.get("/verify")
+async def verify_token(
+    current_user: User = Depends(get_current_user),
+):
+    """Debug endpoint to test token validity."""
+    return {"valid": True, "user_id": current_user.id, "email": current_user.email}
 
 
 @router.post("/change-password")
