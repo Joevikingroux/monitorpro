@@ -1,0 +1,61 @@
+name: Version & Release
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'VERSION'
+
+jobs:
+  tag-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read VERSION
+        id: version
+        run: echo "version=v$(cat VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          if git rev-parse "${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Git tag
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          git config user.name "Numbers10 Bot"
+          git config user.email "joe@numbers10.co.za"
+          git tag -a ${{ steps.version.outputs.version }} \
+            -m "Release ${{ steps.version.outputs.version }}"
+          git push origin ${{ steps.version.outputs.version }}
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION=$(cat VERSION)
+          # Extract section between this version and the previous one
+          NOTES=$(awk "/^## \[$VERSION\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: "PCMonitor Pro ${{ steps.version.outputs.version }}"
+          body: ${{ steps.changelog.outputs.notes }}
+          draft: false
+          prerelease: false

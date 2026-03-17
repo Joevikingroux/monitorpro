@@ -1,0 +1,18 @@
+[server]
+; URL of your PCMonitor backend (include port)
+url = https://YOUR-VPS-IP:8443
+
+; Company token — get this from the dashboard under Companies → Copy Token
+; This identifies which client company this probe belongs to
+company_token = PASTE_COMPANY_TOKEN_HERE
+
+; How often to send metrics (seconds) — recommended: 30
+ingest_interval_seconds = 30
+
+[hardware]
+; Set to true if OpenHardwareMonitor is running on this PC (enables CPU/GPU temps)
+use_open_hardware_monitor = false
+
+[security]
+; Set to false ONLY for dev/testing with self-signed certs — always true in production
+verify_ssl = true
