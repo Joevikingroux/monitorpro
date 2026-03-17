@@ -8,6 +8,49 @@
 
 ---
 
+## 📁 Git Repository
+
+**All code must be committed and pushed to this repository:**
+```
+https://github.com/Joevikingroux/monitorpro.git
+```
+
+**Before writing any code, clone the repo and create the develop branch:**
+```bash
+git clone https://github.com/Joevikingroux/monitorpro.git
+cd monitorpro
+git checkout -b develop
+```
+
+**Commit after completing each major component — do not do one giant commit:**
+```bash
+# After backend models + schemas + migrations + API routes + services
+git add backend/
+git commit -m "feat(backend): models, schemas, migrations, all API routes, alert engine"
+
+# After probe agent — all collectors + installer + EXE build script
+git add probe/
+git commit -m "feat(probe): Windows Service, all collectors, installer, EXE build"
+
+# After frontend — all pages + components + Numbers10 theme
+git add frontend/
+git commit -m "feat(frontend): React dashboard, all pages, Numbers10 brand theme"
+
+# After infrastructure — Docker, nginx, setup.sh, .env.example
+git add docker-compose.yml nginx.conf setup.sh backend/.env.example
+git commit -m "feat(infra): Docker Compose, nginx port 8443, one-command setup.sh"
+
+# Push the develop branch
+git push origin develop
+```
+
+**Branch rules:**
+- Work on the `develop` branch — never push directly to `main`
+- Do NOT modify `VERSION`, `CHANGELOG.md`, `README.md` — those are managed separately
+- The `main` branch is production-stable and protected
+
+---
+
 ## 🎯 Project Overview
 
 Build **Numbers10 PCMonitor** — a full-stack, enterprise-grade PC monitoring platform
@@ -717,7 +760,7 @@ Generate:
 - `setup.sh` — one-command VPS setup script:
   ```bash
   # 1. Install Docker + Docker Compose
-  # 2. Clone repo
+  # 2. Clone repo: git clone https://github.com/Joevikingroux/monitorpro.git
   # 3. Copy .env.example → .env and prompt for passwords
   # 4. Generate self-signed SSL cert into ./certs/ if none exists
   # 5. Run: docker compose up -d --build
@@ -909,6 +952,8 @@ Claude Code must produce all of the following, fully working and production-read
 ---
 
 ## 🚀 Build Instructions for Claude Code
+
+0. **Clone the repo first** — `git clone https://github.com/Joevikingroux/monitorpro.git && cd monitorpro && git checkout -b develop`
 
 1. **Start with the backend** — build models (`company` first, then `machine` with
    `company_id` FK, then `metric`, `alert`, `event_log`), then schemas, then API
