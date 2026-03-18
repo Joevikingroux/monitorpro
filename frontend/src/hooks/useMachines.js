@@ -21,6 +21,7 @@ export function useMachine(id) {
       return data
     },
     enabled: !!id,
+    refetchInterval: 30000,
   })
 }
 
