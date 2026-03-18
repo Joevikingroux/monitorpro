@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { Monitor, Cpu, HardDrive, Wifi, Shield, Server, Package, FileWarning } from 'lucide-react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { Monitor, Cpu, HardDrive, Wifi, Shield, Server, Package, FileWarning, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
-import { useMachine, useMachineServices, useMachineSoftware, useMachineEventLogs } from '../hooks/useMachines'
+import { useMachine, useMachineServices, useMachineSoftware, useMachineEventLogs, useDeleteMachine } from '../hooks/useMachines'
 import { useLatestMetric, useMetricHistory, useProcesses } from '../hooks/useMetrics'
 import MetricGauge from '../components/MetricGauge'
 import LiveChart from '../components/LiveChart'
@@ -11,7 +11,10 @@ const TABS = ['Overview', 'Processes', 'Services', 'Software', 'Event Logs', 'Se
 
 export default function MachineDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [tab, setTab] = useState('Overview')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const deleteMachine = useDeleteMachine()
   const { data: machine } = useMachine(id)
   const { data: latest } = useLatestMetric(id)
   const { data: history = [] } = useMetricHistory(id)
@@ -53,7 +56,26 @@ export default function MachineDetail() {
             <span>{machine.total_ram_gb} GB RAM</span>
           </div>
         </div>
-        <div className={`w-3 h-3 rounded-full ${machine.is_online ? 'animate-pulse-dot' : ''}`} style={{ background: machine.is_online ? '#2dd4bf' : '#475569' }} />
+        <div className="flex items-center gap-3">
+          <div className={`w-3 h-3 rounded-full ${machine.is_online ? 'animate-pulse-dot' : ''}`} style={{ background: machine.is_online ? '#2dd4bf' : '#475569' }} />
+          <button
+            onClick={() => {
+              if (!confirmDelete) { setConfirmDelete(true); setTimeout(() => setConfirmDelete(false), 3000); return; }
+              deleteMachine.mutate(id, { onSuccess: () => navigate('/dashboard') })
+            }}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded transition-all"
+            style={{
+              background: confirmDelete ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.08)',
+              border: `1px solid ${confirmDelete ? '#ef4444' : 'rgba(239,68,68,0.4)'}`,
+              color: confirmDelete ? '#ef4444' : '#f87171',
+              cursor: 'pointer',
+              fontWeight: confirmDelete ? 700 : 400,
+            }}
+          >
+            <Trash2 size={14} />
+            {confirmDelete ? 'Confirm Delete?' : 'Delete Machine'}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

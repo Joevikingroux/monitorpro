@@ -130,17 +130,17 @@ export default function MachineCard({ machine, latestMetric }) {
           </span>
           <button
             onClick={handleDelete}
-            title={confirmDelete ? 'Click again to confirm delete' : 'Delete machine'}
-            className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded transition-all"
+            className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-all"
             style={{
-              background: confirmDelete ? 'rgba(239,68,68,0.2)' : 'transparent',
-              border: `0.667px solid ${confirmDelete ? '#ef4444' : 'rgba(239,68,68,0.3)'}`,
-              color: confirmDelete ? '#ef4444' : 'rgba(239,68,68,0.6)',
+              background: confirmDelete ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.08)',
+              border: `1px solid ${confirmDelete ? '#ef4444' : 'rgba(239,68,68,0.4)'}`,
+              color: confirmDelete ? '#ef4444' : '#f87171',
               cursor: 'pointer',
+              fontWeight: confirmDelete ? 700 : 400,
             }}
           >
             <Trash2 size={11} />
-            {confirmDelete ? 'Confirm' : ''}
+            {confirmDelete ? 'Confirm?' : 'Delete'}
           </button>
         </div>
       </div>
