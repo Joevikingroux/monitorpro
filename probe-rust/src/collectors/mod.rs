@@ -24,8 +24,9 @@ pub struct DiskInfo {
 pub struct ProcessInfo {
     pub pid: u32,
     pub name: String,
-    pub cpu_pct: f32,
+    pub cpu_percent: f32,  // matches frontend field name
     pub ram_mb: f64,
+    pub status: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -82,11 +83,12 @@ pub fn collect_all(sys: &System) -> MetricSnapshot {
         .map(|p| ProcessInfo {
             pid: p.pid().as_u32(),
             name: p.name().to_string(),
-            cpu_pct: p.cpu_usage(),
+            cpu_percent: p.cpu_usage(),
             ram_mb: p.memory() as f64 / 1_048_576.0,
+            status: format!("{:?}", p.status()),
         })
         .collect();
-    procs.sort_by(|a, b| b.cpu_pct.partial_cmp(&a.cpu_pct).unwrap());
+    procs.sort_by(|a, b| b.cpu_percent.partial_cmp(&a.cpu_percent).unwrap());
     procs.truncate(10);
 
     MetricSnapshot {
