@@ -20,8 +20,9 @@ else
     echo "[1/4] certbot already installed."
 fi
 
-# Create webroot directory (mounted into nginx container)
-mkdir -p /var/lib/docker/volumes/monitorpro_certbot-webroot/_data
+# Create webroot directory (bind-mounted into nginx container)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+mkdir -p "$SCRIPT_DIR/certbot-webroot"
 
 echo "[2/4] Starting nginx with temporary self-signed cert so port 80 is reachable..."
 # If the stack is already up, nginx is already serving port 80 (ACME challenge block)
@@ -45,7 +46,7 @@ else
     echo "[2/4] nginx is running — using webroot method..."
     # Nginx is already running with the ACME block on port 80
     # Use webroot pointed at the certbot-webroot volume
-    WEBROOT="/var/lib/docker/volumes/monitorpro_certbot-webroot/_data"
+    WEBROOT="$SCRIPT_DIR/certbot-webroot"
     certbot certonly \
         --webroot \
         --webroot-path "$WEBROOT" \
@@ -57,7 +58,7 @@ else
 fi
 
 echo "[4/4] Setting up auto-renewal cron job..."
-CRON_JOB="0 3 * * * certbot renew --quiet --webroot --webroot-path /var/lib/docker/volumes/monitorpro_certbot-webroot/_data && docker compose -f $(pwd)/docker-compose.yml exec nginx nginx -s reload"
+CRON_JOB="0 3 * * * certbot renew --quiet --webroot --webroot-path $SCRIPT_DIR/certbot-webroot && docker compose -f $SCRIPT_DIR/docker-compose.yml exec nginx nginx -s reload"
 (crontab -l 2>/dev/null | grep -v "certbot renew"; echo "$CRON_JOB") | crontab -
 
 echo ""

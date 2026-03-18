@@ -54,7 +54,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - certbot-webroot:/var/www/certbot:ro
+      - ./certbot-webroot:/var/www/certbot:ro
     depends_on:
       - backend
       - frontend
@@ -62,4 +62,3 @@ services:
 
 volumes:
   pgdata:
-  certbot-webroot:
