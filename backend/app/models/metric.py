@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, Index
+from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, Index, Boolean, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -29,6 +29,10 @@ class Metric(Base):
     gpu_percent = Column(Float)
     gpu_temp_c = Column(Float)
     gpu_vram_used_mb = Column(Float)
+
+    firewall_enabled = Column(Boolean, nullable=True)
+    av_status = Column(String(255), nullable=True)
+    last_boot_time = Column(DateTime(timezone=True), nullable=True)
 
     machine = relationship("Machine", back_populates="metrics")
 

@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 
 use crate::config::ProbeConfig;
 use crate::collectors::MetricSnapshot;
+use crate::collectors::windows_ext::{ServiceInfo, SoftwareInfo, EventLogEntry};
 
 // ── Request / Response types — must match backend schemas exactly ─────────
 
@@ -52,6 +53,9 @@ pub struct MetricPayload {
     pub gpu_percent: Option<f32>,
     pub gpu_temp_c: Option<f32>,
     pub gpu_vram_used_mb: Option<f64>,
+    pub firewall_enabled: Option<bool>,
+    pub av_status: Option<String>,
+    pub last_boot_time: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 impl From<&MetricSnapshot> for MetricPayload {
@@ -72,6 +76,9 @@ impl From<&MetricSnapshot> for MetricPayload {
             gpu_percent: s.gpu_percent,
             gpu_temp_c: s.gpu_temp_c,
             gpu_vram_used_mb: s.gpu_vram_used_mb,
+            firewall_enabled: s.firewall_enabled,
+            av_status: s.av_status.clone(),
+            last_boot_time: s.last_boot_time,
         }
     }
 }
@@ -122,6 +129,43 @@ impl ApiClient {
         }
 
         Ok(latency_ms)
+    }
+
+    pub async fn post_services(&self, machine_id: &str, services: Vec<ServiceInfo>) -> Result<()> {
+        let url = format!("{}/api/machines/{}/services", self.base_url, machine_id);
+        let resp = self.client.post(&url)
+            .header("X-API-Key", &self.api_key)
+            .json(&services)
+            .send().await?;
+        if !resp.status().is_success() {
+            bail!("post_services {} failed: {}", resp.status(), resp.text().await.unwrap_or_default());
+        }
+        Ok(())
+    }
+
+    pub async fn post_software(&self, machine_id: &str, software: Vec<SoftwareInfo>) -> Result<()> {
+        let url = format!("{}/api/machines/{}/software", self.base_url, machine_id);
+        let resp = self.client.post(&url)
+            .header("X-API-Key", &self.api_key)
+            .json(&software)
+            .send().await?;
+        if !resp.status().is_success() {
+            bail!("post_software {} failed: {}", resp.status(), resp.text().await.unwrap_or_default());
+        }
+        Ok(())
+    }
+
+    pub async fn post_event_logs(&self, machine_id: &str, events: Vec<EventLogEntry>) -> Result<()> {
+        if events.is_empty() { return Ok(()); }
+        let url = format!("{}/api/machines/{}/event-logs", self.base_url, machine_id);
+        let resp = self.client.post(&url)
+            .header("X-API-Key", &self.api_key)
+            .json(&events)
+            .send().await?;
+        if !resp.status().is_success() {
+            bail!("post_event_logs {} failed: {}", resp.status(), resp.text().await.unwrap_or_default());
+        }
+        Ok(())
     }
 }
 

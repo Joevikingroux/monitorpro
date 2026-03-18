@@ -104,6 +104,14 @@ async fn metric_loop(running: Arc<AtomicBool>) -> Result<()> {
     let mut last_latency: Option<u64> = None;
     let interval = Duration::from_secs(cfg.ingest_interval_secs);
 
+    // Slow-data timers (seconds elapsed since last run)
+    let mut slow_timer: u64 = 300; // start at 300 so first run happens immediately
+    let mut software_sent = false;
+    let slow_interval: u64 = 300; // every 5 minutes
+
+    // Cached security info (refreshed with slow data)
+    let mut cached_security: collectors::windows_ext::SecurityInfo = Default::default();
+
     let mut status = ipc::ProbeStatus {
         server_url: cfg.server_url.clone(),
         company_token_hint: format!(
@@ -152,10 +160,57 @@ async fn metric_loop(running: Arc<AtomicBool>) -> Result<()> {
             }
         }
 
+        // ── Slow data: services, event logs, software, security (every 5 min) ──
+        slow_timer += cfg.ingest_interval_secs;
+        if slow_timer >= slow_interval {
+            slow_timer = 0;
+
+            // Refresh security info
+            cached_security = tokio::task::spawn_blocking(collectors::windows_ext::collect_security)
+                .await
+                .unwrap_or_default();
+
+            // Post services + event logs if we have a machine_id
+            if let (Some(client), Some(machine_id)) = (&api_client, &cfg.machine_id) {
+                let svcs = tokio::task::spawn_blocking(collectors::windows_ext::collect_services)
+                    .await
+                    .unwrap_or_default();
+                if let Err(e) = client.post_services(machine_id, svcs).await {
+                    warn!("post_services failed: {:#}", e);
+                }
+
+                let logs = tokio::task::spawn_blocking(move || {
+                    collectors::windows_ext::collect_event_logs(slow_interval / 60 + 1)
+                })
+                .await
+                .unwrap_or_default();
+                if let Err(e) = client.post_event_logs(machine_id, logs).await {
+                    warn!("post_event_logs failed: {:#}", e);
+                }
+
+                // Software: once on startup only
+                if !software_sent {
+                    let sw = tokio::task::spawn_blocking(collectors::windows_ext::collect_software)
+                        .await
+                        .unwrap_or_default();
+                    if let Err(e) = client.post_software(machine_id, sw).await {
+                        warn!("post_software failed: {:#}", e);
+                    } else {
+                        software_sent = true;
+                    }
+                }
+            }
+        }
+
         sys.refresh_specifics(refresh_kind);
 
         let mut snapshot = collectors::collect_all(&sys);
         snapshot.net_latency_ms = last_latency;
+
+        // Attach cached security info
+        snapshot.firewall_enabled = cached_security.firewall_enabled;
+        snapshot.av_status = cached_security.av_status.clone();
+        snapshot.last_boot_time = cached_security.last_boot_time;
 
         // Update status for tray
         status.cpu_percent = snapshot.cpu_percent;
@@ -191,6 +246,7 @@ async fn metric_loop(running: Arc<AtomicBool>) -> Result<()> {
                         cfg.machine_id = None;
                         api_client = None;
                         status.machine_id = None;
+                        software_sent = false;
                         if let Err(se) = config::save_config(&cfg) {
                             warn!("Could not clear config: {:#}", se);
                         }

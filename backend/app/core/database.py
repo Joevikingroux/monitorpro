@@ -30,6 +30,13 @@ async def init_db():
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Add new columns to existing tables without a full migration
+        for stmt in [
+            "ALTER TABLE metrics ADD COLUMN IF NOT EXISTS firewall_enabled BOOLEAN",
+            "ALTER TABLE metrics ADD COLUMN IF NOT EXISTS av_status VARCHAR(255)",
+            "ALTER TABLE metrics ADD COLUMN IF NOT EXISTS last_boot_time TIMESTAMPTZ",
+        ]:
+            await conn.execute(text(stmt))
 
     async with async_session() as session:
         result = await session.execute(

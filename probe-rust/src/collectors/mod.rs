@@ -2,6 +2,7 @@ pub mod cpu;
 pub mod disk;
 pub mod memory;
 pub mod network;
+pub mod windows_ext;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -59,6 +60,11 @@ pub struct MetricSnapshot {
 
     // Top processes
     pub top_processes: Vec<ProcessInfo>,
+
+    // Security (refreshed every 5 min, cached between cycles)
+    pub firewall_enabled: Option<bool>,
+    pub av_status: Option<String>,
+    pub last_boot_time: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 /// Collect all metrics. `sys` must have been refreshed by caller.
@@ -101,5 +107,8 @@ pub fn collect_all(sys: &System) -> MetricSnapshot {
         gpu_temp_c: None,
         gpu_vram_used_mb: None,
         top_processes: procs,
+        firewall_enabled: None,
+        av_status: None,
+        last_boot_time: None,
     }
 }

@@ -19,6 +19,9 @@ class MetricIngestRequest(BaseModel):
     gpu_percent: Optional[float] = Field(None, ge=0, le=100)
     gpu_temp_c: Optional[float] = Field(None, ge=-50, le=200)
     gpu_vram_used_mb: Optional[float] = Field(None, ge=0)
+    firewall_enabled: Optional[bool] = None
+    av_status: Optional[str] = None
+    last_boot_time: Optional[datetime] = None
 
 
 class MetricBatchIngestRequest(BaseModel):
@@ -43,5 +46,8 @@ class MetricResponse(BaseModel):
     gpu_percent: Optional[float] = None
     gpu_temp_c: Optional[float] = None
     gpu_vram_used_mb: Optional[float] = None
+    firewall_enabled: Optional[bool] = None
+    av_status: Optional[str] = None
+    last_boot_time: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
