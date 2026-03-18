@@ -20,10 +20,10 @@ export default function MachineCard({ machine, latestMetric }) {
     }
     deleteMachine.mutate(machine.id)
   }
-  const cpu = latestMetric?.cpu_percent || 0
-  const ram = latestMetric?.ram_percent || 0
+  const cpu = isOnline ? (latestMetric?.cpu_percent || 0) : 0
+  const ram = isOnline ? (latestMetric?.ram_percent || 0) : 0
 
-  const diskPercent = latestMetric?.disk_usage?.length
+  const diskPercent = isOnline && latestMetric?.disk_usage?.length
     ? Math.max(...latestMetric.disk_usage.map((d) => d.percent || 0))
     : 0
 

@@ -13,18 +13,17 @@ export function useLatestMetric(machineId) {
   })
 }
 
-export function useMetricHistory(machineId, from, to, interval) {
+export function useMetricHistory(machineId, fromDate) {
   return useQuery({
-    queryKey: ['metric-history', machineId, from, to, interval],
+    queryKey: ['metric-history', machineId, fromDate],
     queryFn: async () => {
       const params = {}
-      if (from) params.from = from
-      if (to) params.to = to
-      if (interval) params.interval = interval
+      if (fromDate) params.from = fromDate
       const { data } = await client.get(`/metrics/${machineId}`, { params })
       return data
     },
     enabled: !!machineId,
+    refetchInterval: 30000,
   })
 }
 

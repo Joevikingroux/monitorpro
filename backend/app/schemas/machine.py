@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Any
 from datetime import datetime
 
 
@@ -18,6 +18,16 @@ class MachineRegisterResponse(BaseModel):
     api_key: str
 
 
+class LatestMetricSummary(BaseModel):
+    cpu_percent: Optional[float] = None
+    ram_percent: Optional[float] = None
+    disk_usage: Optional[List[Any]] = None
+    net_latency_ms: Optional[float] = None
+    collected_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
 class MachineResponse(BaseModel):
     id: int
     company_id: int
@@ -34,6 +44,7 @@ class MachineResponse(BaseModel):
     registered_at: Optional[datetime] = None
     group_tag: Optional[str] = None
     notes: Optional[str] = None
+    latest_metric: Optional[LatestMetricSummary] = None
 
     model_config = {"from_attributes": True}
 

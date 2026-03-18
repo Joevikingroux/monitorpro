@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone  # noqa: F401 (timezone used in span calc)
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -70,24 +70,20 @@ async def get_metrics(
     if to_dt:
         query = query.where(Metric.collected_at <= to_dt)
 
-    query = query.order_by(Metric.collected_at.desc())
+    query = query.order_by(Metric.collected_at.asc())
 
-    if interval == "15m":
-        query = query.limit(672)  # 7 days * 24h * 4 per hour
-    elif interval == "1h":
-        query = query.limit(168)  # 7 days * 24h
+    # Determine limit based on requested time range
+    if from_dt:
+        span_hours = (datetime.now(timezone.utc) - from_dt).total_seconds() / 3600
+        if span_hours > 48:
+            query = query.limit(5000)
+        else:
+            query = query.limit(3000)
     else:
-        query = query.limit(1000)
+        query = query.limit(120)  # ~1h default at 30s intervals
 
     result = await db.execute(query)
     metrics = result.scalars().all()
-
-    if interval == "15m" and len(metrics) > 0:
-        downsampled = []
-        for i in range(0, len(metrics), max(1, len(metrics) // 672)):
-            downsampled.append(metrics[i])
-        return downsampled
-
     return metrics
 
 

@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -17,7 +17,7 @@ from app.models.event_log import WindowsService, SoftwareInventory, EventLog
 from app.models.metric import Metric
 from app.models.alert import AlertEvent
 from app.schemas.machine import (
-    MachineRegisterRequest, MachineRegisterResponse, MachineResponse,
+    MachineRegisterRequest, MachineRegisterResponse, MachineResponse, LatestMetricSummary,
     MachineUpdateRequest, ServiceResponse, SoftwareResponse, EventLogResponse,
     ServiceIngestRequest, SoftwareIngestRequest, EventLogIngestRequest,
 )
@@ -98,10 +98,31 @@ async def list_machines(
     result = await db.execute(query)
     machines = result.scalars().all()
 
+    # Fetch latest metric for each machine in one query
+    machine_ids = [m.id for m in machines]
+    latest_by_machine = {}
+    if machine_ids:
+        subq = (
+            select(Metric.machine_id, func.max(Metric.collected_at).label("max_ts"))
+            .where(Metric.machine_id.in_(machine_ids))
+            .group_by(Metric.machine_id)
+            .subquery()
+        )
+        metrics_result = await db.execute(
+            select(Metric).join(
+                subq,
+                (Metric.machine_id == subq.c.machine_id) &
+                (Metric.collected_at == subq.c.max_ts),
+            )
+        )
+        latest_by_machine = {m.machine_id: m for m in metrics_result.scalars().all()}
+
     return [
         MachineResponse(
             **{c.name: getattr(m, c.name) for c in Machine.__table__.columns},
             company_name=m.company.name if m.company else None,
+            latest_metric=LatestMetricSummary.model_validate(latest_by_machine[m.id])
+            if m.id in latest_by_machine else None,
         )
         for m in machines
     ]

@@ -14,10 +14,12 @@ export default function MachineDetail() {
   const navigate = useNavigate()
   const [tab, setTab] = useState('Overview')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [chartHours, setChartHours] = useState(1)
   const deleteMachine = useDeleteMachine()
   const { data: machine } = useMachine(id)
   const { data: latest } = useLatestMetric(id)
-  const { data: history = [] } = useMetricHistory(id)
+  const fromDate = new Date(Date.now() - chartHours * 3600 * 1000).toISOString()
+  const { data: history = [] } = useMetricHistory(id, fromDate)
   const { data: procs = [] } = useProcesses(id)
   const { data: svcs = [] } = useMachineServices(id)
   const { data: software = [] } = useMachineSoftware(id)
@@ -53,7 +55,7 @@ export default function MachineDetail() {
             <span>{machine.ip_address}</span>
             <span>{machine.os_version}</span>
             <span>{machine.cpu_model}</span>
-            <span>{machine.total_ram_gb} GB RAM</span>
+            <span>{machine.total_ram_gb ? parseFloat(machine.total_ram_gb).toFixed(1) : '—'} GB RAM</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -124,10 +126,10 @@ export default function MachineDetail() {
             <MetricCard label="LATENCY" value={latest?.net_latency_ms} unit="ms" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <LiveChart data={history} dataKey="cpu_percent" title="CPU Usage" unit="%" />
-            <LiveChart data={history} dataKey="ram_percent" title="RAM Usage" unit="%" />
-            <LiveChart data={history} dataKey="net_sent_mb" title="Network Sent" unit=" MB" />
-            <LiveChart data={history} dataKey="net_recv_mb" title="Network Received" unit=" MB" />
+            <LiveChart data={history} dataKey="cpu_percent" title="CPU Usage" unit="%" selectedHours={chartHours} onRangeChange={setChartHours} />
+            <LiveChart data={history} dataKey="ram_percent" title="RAM Usage" unit="%" selectedHours={chartHours} />
+            <LiveChart data={history} dataKey="net_sent_mb" title="Network Sent" unit=" MB" selectedHours={chartHours} />
+            <LiveChart data={history} dataKey="net_recv_mb" title="Network Received" unit=" MB" selectedHours={chartHours} />
           </div>
         </div>
       )}
@@ -161,31 +163,35 @@ export default function MachineDetail() {
 
       {tab === 'Services' && (
         <div className="rounded-n10 overflow-hidden" style={{ background: 'rgba(10,18,32,0.7)', border: '0.667px solid rgba(45,212,191,0.15)' }}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ borderBottom: '0.667px solid rgba(45,212,191,0.1)' }}>
-                <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Service</th>
-                <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Display Name</th>
-                <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Status</th>
-                <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Startup</th>
-              </tr>
-            </thead>
-            <tbody>
-              {svcs.map((s, i) => (
-                <tr key={i} className="hover:bg-[rgba(45,212,191,0.05)]" style={{ borderBottom: '0.667px solid rgba(45,212,191,0.05)' }}>
-                  <td className="px-4 py-2 font-mono text-xs" style={{ color: 'rgb(148,163,184)' }}>{s.service_name}</td>
-                  <td className="px-4 py-2" style={{ color: 'rgb(224,247,250)' }}>{s.display_name}</td>
-                  <td className="px-4 py-2">
-                    <span className="text-xs px-2 py-0.5 rounded" style={{
-                      background: s.status === 'Running' ? 'rgba(45,212,191,0.1)' : 'rgba(239,68,68,0.1)',
-                      color: s.status === 'Running' ? '#2dd4bf' : '#ef4444',
-                    }}>{s.status}</span>
-                  </td>
-                  <td className="px-4 py-2 text-xs" style={{ color: 'rgb(100,116,139)' }}>{s.startup_type}</td>
+          {svcs.length === 0 ? (
+            <div className="p-8 text-center" style={{ color: 'rgb(100,116,139)' }}>No services data collected yet. The probe will send this on the next cycle.</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderBottom: '0.667px solid rgba(45,212,191,0.1)' }}>
+                  <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Service</th>
+                  <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Display Name</th>
+                  <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Status</th>
+                  <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Startup</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {svcs.map((s, i) => (
+                  <tr key={i} className="hover:bg-[rgba(45,212,191,0.05)]" style={{ borderBottom: '0.667px solid rgba(45,212,191,0.05)' }}>
+                    <td className="px-4 py-2 font-mono text-xs" style={{ color: 'rgb(148,163,184)' }}>{s.service_name}</td>
+                    <td className="px-4 py-2" style={{ color: 'rgb(224,247,250)' }}>{s.display_name}</td>
+                    <td className="px-4 py-2">
+                      <span className="text-xs px-2 py-0.5 rounded" style={{
+                        background: s.status === 'Running' ? 'rgba(45,212,191,0.1)' : 'rgba(239,68,68,0.1)',
+                        color: s.status === 'Running' ? '#2dd4bf' : '#ef4444',
+                      }}>{s.status}</span>
+                    </td>
+                    <td className="px-4 py-2 text-xs" style={{ color: 'rgb(100,116,139)' }}>{s.startup_type}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
@@ -199,70 +205,86 @@ export default function MachineDetail() {
             style={{ background: 'rgb(5,10,18)', border: '0.667px solid rgba(45,212,191,0.15)', borderRadius: '8px', color: 'rgb(224,247,250)' }}
           />
           <div className="rounded-n10 overflow-hidden" style={{ background: 'rgba(10,18,32,0.7)', border: '0.667px solid rgba(45,212,191,0.15)' }}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ borderBottom: '0.667px solid rgba(45,212,191,0.1)' }}>
-                  <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Name</th>
-                  <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Version</th>
-                  <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Publisher</th>
-                  <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Install Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {software.filter((s) => !softwareSearch || s.name?.toLowerCase().includes(softwareSearch.toLowerCase())).map((s, i) => (
-                  <tr key={i} className="hover:bg-[rgba(45,212,191,0.05)]" style={{ borderBottom: '0.667px solid rgba(45,212,191,0.05)' }}>
-                    <td className="px-4 py-2" style={{ color: 'rgb(224,247,250)' }}>{s.name}</td>
-                    <td className="px-4 py-2 font-mono text-xs" style={{ color: 'rgb(148,163,184)' }}>{s.version}</td>
-                    <td className="px-4 py-2 text-xs" style={{ color: 'rgb(100,116,139)' }}>{s.publisher}</td>
-                    <td className="px-4 py-2 text-xs" style={{ color: 'rgb(100,116,139)' }}>{s.install_date}</td>
+            {software.length === 0 ? (
+              <div className="p-8 text-center" style={{ color: 'rgb(100,116,139)' }}>No software inventory collected yet.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ borderBottom: '0.667px solid rgba(45,212,191,0.1)' }}>
+                    <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Name</th>
+                    <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Version</th>
+                    <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Publisher</th>
+                    <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Install Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {software.filter((s) => !softwareSearch || s.name?.toLowerCase().includes(softwareSearch.toLowerCase())).map((s, i) => (
+                    <tr key={i} className="hover:bg-[rgba(45,212,191,0.05)]" style={{ borderBottom: '0.667px solid rgba(45,212,191,0.05)' }}>
+                      <td className="px-4 py-2" style={{ color: 'rgb(224,247,250)' }}>{s.name}</td>
+                      <td className="px-4 py-2 font-mono text-xs" style={{ color: 'rgb(148,163,184)' }}>{s.version}</td>
+                      <td className="px-4 py-2 text-xs" style={{ color: 'rgb(100,116,139)' }}>{s.publisher}</td>
+                      <td className="px-4 py-2 text-xs" style={{ color: 'rgb(100,116,139)' }}>{s.install_date}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
 
       {tab === 'Event Logs' && (
         <div className="rounded-n10 overflow-hidden" style={{ background: 'rgba(10,18,32,0.7)', border: '0.667px solid rgba(45,212,191,0.15)' }}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ borderBottom: '0.667px solid rgba(45,212,191,0.1)' }}>
-                <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Level</th>
-                <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Source</th>
-                <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Event ID</th>
-                <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Message</th>
-                <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {eventLogs.map((e, i) => (
-                <tr key={i} className="hover:bg-[rgba(45,212,191,0.05)]" style={{ borderBottom: '0.667px solid rgba(45,212,191,0.05)' }}>
-                  <td className="px-4 py-2">
-                    <span className="text-xs px-2 py-0.5 rounded" style={{
-                      background: e.level === 'Error' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
-                      color: e.level === 'Error' ? '#ef4444' : '#f59e0b',
-                    }}>{e.level}</span>
-                  </td>
-                  <td className="px-4 py-2 text-xs" style={{ color: 'rgb(148,163,184)' }}>{e.log_source}</td>
-                  <td className="px-4 py-2 font-mono text-xs" style={{ color: 'rgb(148,163,184)' }}>{e.event_id}</td>
-                  <td className="px-4 py-2 text-xs max-w-xs truncate" style={{ color: 'rgb(224,247,250)' }}>{e.message}</td>
-                  <td className="px-4 py-2 font-mono text-xs" style={{ color: 'rgb(100,116,139)' }}>
-                    {e.occurred_at ? format(new Date(e.occurred_at), 'yyyy-MM-dd HH:mm') : ''}
-                  </td>
+          {eventLogs.length === 0 ? (
+            <div className="p-8 text-center" style={{ color: 'rgb(100,116,139)' }}>No event logs collected yet.</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderBottom: '0.667px solid rgba(45,212,191,0.1)' }}>
+                  <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Level</th>
+                  <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Source</th>
+                  <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Event ID</th>
+                  <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Message</th>
+                  <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: 'rgb(100,116,139)', letterSpacing: '0.15em' }}>Time</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {eventLogs.map((e, i) => (
+                  <tr key={i} className="hover:bg-[rgba(45,212,191,0.05)]" style={{ borderBottom: '0.667px solid rgba(45,212,191,0.05)' }}>
+                    <td className="px-4 py-2">
+                      <span className="text-xs px-2 py-0.5 rounded" style={{
+                        background: e.level === 'Error' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+                        color: e.level === 'Error' ? '#ef4444' : '#f59e0b',
+                      }}>{e.level}</span>
+                    </td>
+                    <td className="px-4 py-2 text-xs" style={{ color: 'rgb(148,163,184)' }}>{e.log_source}</td>
+                    <td className="px-4 py-2 font-mono text-xs" style={{ color: 'rgb(148,163,184)' }}>{e.event_id}</td>
+                    <td className="px-4 py-2 text-xs max-w-xs truncate" style={{ color: 'rgb(224,247,250)' }}>{e.message}</td>
+                    <td className="px-4 py-2 font-mono text-xs" style={{ color: 'rgb(100,116,139)' }}>
+                      {e.occurred_at ? format(new Date(e.occurred_at), 'yyyy-MM-dd HH:mm') : ''}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
       {tab === 'Security' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <SecurityCard icon={Shield} label="Firewall" value={latest?.firewall_enabled ? 'ON' : 'Unknown'} color={latest?.firewall_enabled ? '#2dd4bf' : '#475569'} />
-          <SecurityCard icon={Shield} label="Antivirus" value="Check logs" color="#2dd4bf" />
-          <SecurityCard icon={Package} label="Updates" value="See details" color="#f59e0b" />
-          <SecurityCard icon={Server} label="Last Boot" value={machine.last_seen ? format(new Date(machine.last_seen), 'MMM dd HH:mm') : 'Unknown'} color="#2dd4bf" />
+          <SecurityCard icon={Shield} label="Firewall"
+            value={latest?.firewall_enabled != null ? (latest.firewall_enabled ? 'Enabled' : 'Disabled') : 'Not collected'}
+            color={latest?.firewall_enabled ? '#2dd4bf' : '#475569'} />
+          <SecurityCard icon={Shield} label="Antivirus"
+            value={latest?.av_status || 'Not collected'}
+            color={latest?.av_status === 'OK' ? '#2dd4bf' : '#475569'} />
+          <SecurityCard icon={Package} label="Pending Updates"
+            value={latest?.pending_updates != null ? `${latest.pending_updates} pending` : 'Not collected'}
+            color={latest?.pending_updates > 0 ? '#f59e0b' : '#2dd4bf'} />
+          <SecurityCard icon={Server} label="Last Boot"
+            value={latest?.last_boot_time ? format(new Date(latest.last_boot_time), 'MMM dd HH:mm') : 'Not collected'}
+            color="#2dd4bf" />
         </div>
       )}
     </div>
