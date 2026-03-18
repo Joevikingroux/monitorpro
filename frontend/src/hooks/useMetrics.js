@@ -13,13 +13,12 @@ export function useLatestMetric(machineId) {
   })
 }
 
-export function useMetricHistory(machineId, fromDate) {
+export function useMetricHistory(machineId, hours = 1) {
   return useQuery({
-    queryKey: ['metric-history', machineId, fromDate],
+    queryKey: ['metric-history', machineId, hours],
     queryFn: async () => {
-      const params = {}
-      if (fromDate) params.from = fromDate
-      const { data } = await client.get(`/metrics/${machineId}`, { params })
+      const from = new Date(Date.now() - hours * 3600 * 1000).toISOString()
+      const { data } = await client.get(`/metrics/${machineId}`, { params: { from } })
       return data
     },
     enabled: !!machineId,

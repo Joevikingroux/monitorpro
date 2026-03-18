@@ -66,19 +66,23 @@ async def get_metrics(
     query = select(Metric).where(Metric.machine_id == machine_id)
 
     if from_dt:
+        if from_dt.tzinfo is None:
+            from_dt = from_dt.replace(tzinfo=timezone.utc)
         query = query.where(Metric.collected_at >= from_dt)
     if to_dt:
+        if to_dt.tzinfo is None:
+            to_dt = to_dt.replace(tzinfo=timezone.utc)
         query = query.where(Metric.collected_at <= to_dt)
 
     query = query.order_by(Metric.collected_at.asc())
 
     # Determine limit based on requested time range
     if from_dt:
+        # Make timezone-aware if naive
+        if from_dt.tzinfo is None:
+            from_dt = from_dt.replace(tzinfo=timezone.utc)
         span_hours = (datetime.now(timezone.utc) - from_dt).total_seconds() / 3600
-        if span_hours > 48:
-            query = query.limit(5000)
-        else:
-            query = query.limit(3000)
+        query = query.limit(5000 if span_hours > 48 else 3000)
     else:
         query = query.limit(120)  # ~1h default at 30s intervals
 
