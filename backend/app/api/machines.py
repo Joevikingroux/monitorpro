@@ -159,6 +159,7 @@ async def delete_machine(
     if not machine:
         raise HTTPException(status_code=404, detail="Machine not found")
     await db.delete(machine)
+    await db.commit()
     return {"message": "Machine deleted"}
 
 
