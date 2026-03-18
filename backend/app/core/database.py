@@ -35,6 +35,7 @@ async def init_db():
             "ALTER TABLE metrics ADD COLUMN IF NOT EXISTS firewall_enabled BOOLEAN",
             "ALTER TABLE metrics ADD COLUMN IF NOT EXISTS av_status VARCHAR(255)",
             "ALTER TABLE metrics ADD COLUMN IF NOT EXISTS last_boot_time TIMESTAMPTZ",
+            "ALTER TABLE metrics ADD COLUMN IF NOT EXISTS installed_updates INTEGER",
         ]:
             await conn.execute(text(stmt))
 

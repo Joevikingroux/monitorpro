@@ -56,6 +56,7 @@ pub struct MetricPayload {
     pub firewall_enabled: Option<bool>,
     pub av_status: Option<String>,
     pub last_boot_time: Option<chrono::DateTime<chrono::Utc>>,
+    pub installed_updates: Option<u32>,
 }
 
 impl From<&MetricSnapshot> for MetricPayload {
@@ -79,6 +80,7 @@ impl From<&MetricSnapshot> for MetricPayload {
             firewall_enabled: s.firewall_enabled,
             av_status: s.av_status.clone(),
             last_boot_time: s.last_boot_time,
+            installed_updates: s.installed_updates,
         }
     }
 }

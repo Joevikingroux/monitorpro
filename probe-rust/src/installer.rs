@@ -52,6 +52,10 @@ where
     std::fs::create_dir_all(&config_dir)
         .with_context(|| format!("Cannot create {}", config_dir.display()))?;
 
+    progress("Stopping any running tray or status processes...");
+    kill_background_processes();
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
     progress("Copying executable to Program Files...");
     std::fs::copy(&exe_src, &exe_dst)
         .with_context(|| format!("Cannot copy EXE to {}", exe_dst.display()))?;
@@ -161,10 +165,30 @@ where
     Ok(())
 }
 
+/// Kill all other PCMonitorProbe.exe processes (tray, status windows) so the
+/// exe is not locked when we try to stop/delete the service or copy a new exe.
+fn kill_background_processes() {
+    // taskkill /F /IM kills all processes with that image name except ourselves.
+    // We use /FI to exclude our own PID so the uninstaller doesn't self-terminate.
+    let my_pid = std::process::id().to_string();
+    let _ = std::process::Command::new("taskkill.exe")
+        .args([
+            "/F",
+            "/IM", "PCMonitorProbe.exe",
+            "/FI", &format!("PID ne {}", my_pid),
+        ])
+        .output();
+}
+
 pub fn uninstall_with_progress<F>(progress: F) -> Result<()>
 where
     F: Fn(&str),
 {
+    progress("Stopping tray and status windows...");
+    kill_background_processes();
+    // Brief pause so OS releases file handles
+    std::thread::sleep(std::time::Duration::from_millis(800));
+
     progress(&format!("Stopping service '{}'...", config::SERVICE_NAME));
     let _ = sc_raw(&["stop", config::SERVICE_NAME]);
 

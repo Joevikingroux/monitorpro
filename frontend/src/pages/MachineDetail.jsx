@@ -284,9 +284,9 @@ export default function MachineDetail() {
           <SecurityCard icon={Shield} label="Antivirus"
             value={latest?.av_status || 'Not collected'}
             color={latest?.av_status === 'OK' ? '#2dd4bf' : '#475569'} />
-          <SecurityCard icon={Package} label="Pending Updates"
-            value={latest?.pending_updates != null ? `${latest.pending_updates} pending` : 'Not collected'}
-            color={latest?.pending_updates > 0 ? '#f59e0b' : '#2dd4bf'} />
+          <SecurityCard icon={Package} label="Installed Updates"
+            value={latest?.installed_updates != null ? `${latest.installed_updates} hotfixes` : 'Not collected'}
+            color={latest?.installed_updates > 0 ? '#2dd4bf' : '#475569'} />
           <SecurityCard icon={Server} label="Last Boot"
             value={latest?.last_boot_time ? format(new Date(latest.last_boot_time), 'MMM dd HH:mm') : 'Not collected'}
             color="#2dd4bf" />

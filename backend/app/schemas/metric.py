@@ -22,6 +22,7 @@ class MetricIngestRequest(BaseModel):
     firewall_enabled: Optional[bool] = None
     av_status: Optional[str] = None
     last_boot_time: Optional[datetime] = None
+    installed_updates: Optional[int] = None
 
 
 class MetricBatchIngestRequest(BaseModel):
@@ -49,5 +50,6 @@ class MetricResponse(BaseModel):
     firewall_enabled: Optional[bool] = None
     av_status: Optional[str] = None
     last_boot_time: Optional[datetime] = None
+    installed_updates: Optional[int] = None
 
     model_config = {"from_attributes": True}

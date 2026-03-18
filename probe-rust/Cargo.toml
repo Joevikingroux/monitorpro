@@ -39,6 +39,9 @@ image = { version = "0.24", default-features = false, features = ["png"] }
 # Windows registry
 winreg = "0.52"
 
+# WMI — direct queries without PowerShell subprocess overhead
+wmi = "0.13"
+
 # Logging
 log = "0.4"
 log4rs = { version = "1", default-features = false, features = ["console_appender", "file_appender", "rolling_file_appender", "compound_policy", "size_trigger", "fixed_window_roller"] }

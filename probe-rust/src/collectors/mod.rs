@@ -65,6 +65,7 @@ pub struct MetricSnapshot {
     pub firewall_enabled: Option<bool>,
     pub av_status: Option<String>,
     pub last_boot_time: Option<chrono::DateTime<chrono::Utc>>,
+    pub installed_updates: Option<u32>,
 }
 
 /// Collect all metrics. `sys` must have been refreshed by caller.
@@ -110,5 +111,6 @@ pub fn collect_all(sys: &System) -> MetricSnapshot {
         firewall_enabled: None,
         av_status: None,
         last_boot_time: None,
+        installed_updates: None,
     }
 }

@@ -33,7 +33,8 @@ export function useMachineServices(id, enabled = true) {
       return data
     },
     enabled: !!id && enabled,
-    staleTime: 5 * 60 * 1000, // cache for 5 min — services don't change often
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: 'always',
   })
 }
 
@@ -45,7 +46,8 @@ export function useMachineSoftware(id, enabled = true) {
       return data
     },
     enabled: !!id && enabled,
-    staleTime: 60 * 60 * 1000, // cache for 1 hour — software rarely changes
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: 'always', // always re-fetch when tab becomes active
   })
 }
 
@@ -57,7 +59,8 @@ export function useMachineEventLogs(id, enabled = true) {
       return data
     },
     enabled: !!id && enabled,
-    staleTime: 60 * 1000, // cache for 1 min
+    staleTime: 60 * 1000,
+    refetchOnMount: 'always',
   })
 }
 

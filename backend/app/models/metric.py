@@ -33,6 +33,7 @@ class Metric(Base):
     firewall_enabled = Column(Boolean, nullable=True)
     av_status = Column(String(255), nullable=True)
     last_boot_time = Column(DateTime(timezone=True), nullable=True)
+    installed_updates = Column(Integer, nullable=True)
 
     machine = relationship("Machine", back_populates="metrics")
 

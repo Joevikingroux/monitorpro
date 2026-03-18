@@ -104,8 +104,9 @@ async fn metric_loop(running: Arc<AtomicBool>) -> Result<()> {
     let mut last_latency: Option<u64> = None;
     let interval = Duration::from_secs(cfg.ingest_interval_secs);
 
-    // Slow-data timers (seconds elapsed since last run)
-    let mut slow_timer: u64 = 300; // start at 300 so first run happens immediately
+    // Slow-data timers — slow data now runs AFTER the metric send so it can
+    // never block connectivity. Start at 0; first run after 5 minutes.
+    let mut slow_timer: u64 = 0;
     let mut software_sent = false;
     let slow_interval: u64 = 300; // every 5 minutes
 
@@ -137,6 +138,8 @@ async fn metric_loop(running: Arc<AtomicBool>) -> Result<()> {
                     cfg.api_key = Some(key.clone());
                     cfg.machine_id = Some(id.clone());
                     status.machine_id = Some(id);
+                    // Write status immediately so the installer GUI can detect us
+                    let _ = ipc::write_status(&status);
                     if let Err(e) = config::save_config(&cfg) {
                         warn!("Could not save config after registration: {:#}", e);
                     }
@@ -158,48 +161,10 @@ async fn metric_loop(running: Arc<AtomicBool>) -> Result<()> {
                     continue;
                 }
             }
-        }
-
-        // ── Slow data: services, event logs, software, security (every 5 min) ──
-        slow_timer += cfg.ingest_interval_secs;
-        if slow_timer >= slow_interval {
-            slow_timer = 0;
-
-            // Refresh security info
-            cached_security = tokio::task::spawn_blocking(collectors::windows_ext::collect_security)
-                .await
-                .unwrap_or_default();
-
-            // Post services + event logs if we have a machine_id
-            if let (Some(client), Some(machine_id)) = (&api_client, &cfg.machine_id) {
-                let svcs = tokio::task::spawn_blocking(collectors::windows_ext::collect_services)
-                    .await
-                    .unwrap_or_default();
-                if let Err(e) = client.post_services(machine_id, svcs).await {
-                    warn!("post_services failed: {:#}", e);
-                }
-
-                let logs = tokio::task::spawn_blocking(move || {
-                    collectors::windows_ext::collect_event_logs(slow_interval / 60 + 1)
-                })
-                .await
-                .unwrap_or_default();
-                if let Err(e) = client.post_event_logs(machine_id, logs).await {
-                    warn!("post_event_logs failed: {:#}", e);
-                }
-
-                // Software: once on startup only
-                if !software_sent {
-                    let sw = tokio::task::spawn_blocking(collectors::windows_ext::collect_software)
-                        .await
-                        .unwrap_or_default();
-                    if let Err(e) = client.post_software(machine_id, sw).await {
-                        warn!("post_software failed: {:#}", e);
-                    } else {
-                        software_sent = true;
-                    }
-                }
-            }
+        } else {
+            // Already registered — write status at start of loop so installer
+            // can detect us even while slow data is running
+            let _ = ipc::write_status(&status);
         }
 
         sys.refresh_specifics(refresh_kind);
@@ -211,6 +176,7 @@ async fn metric_loop(running: Arc<AtomicBool>) -> Result<()> {
         snapshot.firewall_enabled = cached_security.firewall_enabled;
         snapshot.av_status = cached_security.av_status.clone();
         snapshot.last_boot_time = cached_security.last_boot_time;
+        snapshot.installed_updates = cached_security.installed_updates;
 
         // Update status for tray
         status.cpu_percent = snapshot.cpu_percent;
@@ -233,6 +199,80 @@ async fn metric_loop(running: Arc<AtomicBool>) -> Result<()> {
                     status.last_metric_sent = Some(chrono::Utc::now());
                     status.error_message = None;
                     info!("Metrics sent ({}ms)", latency);
+
+                    // ── Slow data AFTER metric send (like Python version) ──────
+                    // Each collector has a 20s timeout so a hung PowerShell can
+                    // never block the next metric cycle.
+                    slow_timer += cfg.ingest_interval_secs;
+                    if slow_timer >= slow_interval {
+                        slow_timer = 0;
+                        info!("slow_data: collecting security/services/event-logs");
+
+                        // Security (20s timeout)
+                        if let Ok(Ok(sec)) = tokio::time::timeout(
+                            Duration::from_secs(20),
+                            tokio::task::spawn_blocking(collectors::windows_ext::collect_security),
+                        ).await {
+                            cached_security = sec;
+                        } else {
+                            warn!("slow_data: collect_security timed out or failed");
+                        }
+
+                        if let Some(machine_id) = cfg.machine_id.clone() {
+                            // Services (20s timeout)
+                            match tokio::time::timeout(
+                                Duration::from_secs(20),
+                                tokio::task::spawn_blocking(collectors::windows_ext::collect_services),
+                            ).await {
+                                Ok(Ok(svcs)) => {
+                                    let n = svcs.len();
+                                    match client.post_services(&machine_id, svcs).await {
+                                        Ok(_) => info!("post_services: sent {} OK", n),
+                                        Err(e) => warn!("post_services failed: {:#}", e),
+                                    }
+                                }
+                                _ => warn!("slow_data: collect_services timed out or failed"),
+                            }
+
+                            // Event logs (20s timeout)
+                            let since = slow_interval / 60 + 1;
+                            match tokio::time::timeout(
+                                Duration::from_secs(20),
+                                tokio::task::spawn_blocking(move || {
+                                    collectors::windows_ext::collect_event_logs(since)
+                                }),
+                            ).await {
+                                Ok(Ok(logs)) => {
+                                    let n = logs.len();
+                                    match client.post_event_logs(&machine_id, logs).await {
+                                        Ok(_) => info!("post_event_logs: sent {} OK", n),
+                                        Err(e) => warn!("post_event_logs failed: {:#}", e),
+                                    }
+                                }
+                                _ => warn!("slow_data: collect_event_logs timed out or failed"),
+                            }
+
+                            // Software once on startup (20s timeout)
+                            if !software_sent {
+                                match tokio::time::timeout(
+                                    Duration::from_secs(20),
+                                    tokio::task::spawn_blocking(collectors::windows_ext::collect_software),
+                                ).await {
+                                    Ok(Ok(sw)) => {
+                                        let n = sw.len();
+                                        match client.post_software(&machine_id, sw).await {
+                                            Ok(_) => {
+                                                info!("post_software: sent {} items OK", n);
+                                                software_sent = true;
+                                            }
+                                            Err(e) => warn!("post_software failed: {:#}", e),
+                                        }
+                                    }
+                                    _ => warn!("slow_data: collect_software timed out or failed"),
+                                }
+                            }
+                        }
+                    }
                 }
                 Err(e) => {
                     status.connected = false;
@@ -313,14 +353,38 @@ fn local_ip() -> String {
 }
 
 fn mac_address() -> String {
+    // Substrings that indicate a virtual/software adapter — skip these so we
+    // always return the same physical NIC MAC across reinstalls.
+    const VIRTUAL: &[&str] = &[
+        "loopback", "vmware", "vmnet", "vethernet", "vbox", "virtualbox",
+        "docker", "bluetooth", "tap", "tunnel", "isatap", "teredo", "vpn",
+        "pseudo", "6to4", "lo",
+    ];
+
     let networks = sysinfo::Networks::new_with_refreshed_list();
-    for (name, data) in &networks {
-        if !name.contains("lo") {
-            let mac = data.mac_address().to_string();
-            if mac != "00:00:00:00:00:00" {
-                return mac;
-            }
+    let name_lower_pairs: Vec<(String, &sysinfo::NetworkData)> = networks
+        .iter()
+        .map(|(n, d)| (n.to_lowercase(), d))
+        .collect();
+
+    // First pass: prefer a physical adapter (name doesn't match any virtual keyword)
+    for (name_lc, data) in &name_lower_pairs {
+        if VIRTUAL.iter().any(|v| name_lc.contains(v)) {
+            continue;
+        }
+        let mac = data.mac_address().to_string();
+        if mac != "00:00:00:00:00:00" {
+            return mac;
         }
     }
+
+    // Second pass: accept any adapter with a real MAC (fallback)
+    for (_, data) in &name_lower_pairs {
+        let mac = data.mac_address().to_string();
+        if mac != "00:00:00:00:00:00" {
+            return mac;
+        }
+    }
+
     "00:00:00:00:00:00".into()
 }

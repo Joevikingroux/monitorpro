@@ -35,15 +35,24 @@ async def register_machine(request: MachineRegisterRequest, db: AsyncSession = D
     if not company:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid company token")
 
-    # Look up existing machine by MAC address within this company.
-    # This ensures reinstalls, resets, and re-registrations reuse the same
-    # machine record instead of creating duplicates.
+    # Look up existing machine to avoid duplicates on reinstall.
+    # 1st: match by MAC address (most reliable — hardware identifier)
+    # 2nd: match by hostname (fallback if MAC changed, e.g. virtual adapter picked)
     existing = None
     if request.mac_address and request.mac_address != "00:00:00:00:00:00":
         result = await db.execute(
             select(Machine).where(
                 Machine.company_id == company.id,
                 Machine.mac_address == request.mac_address,
+            )
+        )
+        existing = result.scalar_one_or_none()
+
+    if not existing and request.hostname:
+        result = await db.execute(
+            select(Machine).where(
+                Machine.company_id == company.id,
+                Machine.hostname == request.hostname,
             )
         )
         existing = result.scalar_one_or_none()

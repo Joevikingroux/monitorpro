@@ -228,7 +228,8 @@ pub fn run() {
             .with_inner_size([460.0, 490.0])
             .with_min_inner_size([420.0, 420.0])
             .with_resizable(false)
-            .with_visible(true),
+            .with_visible(true)
+            .with_taskbar(true),
         centered: true,
         ..Default::default()
     };
