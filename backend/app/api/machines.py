@@ -14,6 +14,8 @@ from app.models.user import User
 from app.models.company import Company
 from app.models.machine import Machine
 from app.models.event_log import WindowsService, SoftwareInventory, EventLog
+from app.models.metric import Metric
+from app.models.alert import AlertEvent
 from app.schemas.machine import (
     MachineRegisterRequest, MachineRegisterResponse, MachineResponse,
     MachineUpdateRequest, ServiceResponse, SoftwareResponse, EventLogResponse,
@@ -158,6 +160,12 @@ async def delete_machine(
     machine = result.scalar_one_or_none()
     if not machine:
         raise HTTPException(status_code=404, detail="Machine not found")
+    # Delete child records first to avoid FK constraint violations
+    await db.execute(delete(Metric).where(Metric.machine_id == machine_id))
+    await db.execute(delete(AlertEvent).where(AlertEvent.machine_id == machine_id))
+    await db.execute(delete(WindowsService).where(WindowsService.machine_id == machine_id))
+    await db.execute(delete(SoftwareInventory).where(SoftwareInventory.machine_id == machine_id))
+    await db.execute(delete(EventLog).where(EventLog.machine_id == machine_id))
     await db.delete(machine)
     await db.commit()
     return {"message": "Machine deleted"}
