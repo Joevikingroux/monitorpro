@@ -3,10 +3,8 @@
 /// closes it. Can be opened and closed any number of times cleanly.
 
 use eframe::egui;
-use image::RgbaImage;
 
 use crate::ipc::{self, ProbeStatus};
-use crate::config;
 
 static LOGO_BYTES: &[u8] = include_bytes!("../assets/logo.png");
 

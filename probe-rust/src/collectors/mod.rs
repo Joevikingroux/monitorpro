@@ -6,7 +6,7 @@ pub mod windows_ext;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sysinfo::{CpuRefreshKind, RefreshKind, System};
+use sysinfo::System;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiskInfo {
