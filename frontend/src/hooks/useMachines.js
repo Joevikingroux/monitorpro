@@ -24,36 +24,39 @@ export function useMachine(id) {
   })
 }
 
-export function useMachineServices(id) {
+export function useMachineServices(id, enabled = true) {
   return useQuery({
     queryKey: ['machine-services', id],
     queryFn: async () => {
       const { data } = await client.get(`/machines/${id}/services`)
       return data
     },
-    enabled: !!id,
+    enabled: !!id && enabled,
+    staleTime: 5 * 60 * 1000, // cache for 5 min — services don't change often
   })
 }
 
-export function useMachineSoftware(id) {
+export function useMachineSoftware(id, enabled = true) {
   return useQuery({
     queryKey: ['machine-software', id],
     queryFn: async () => {
       const { data } = await client.get(`/machines/${id}/software`)
       return data
     },
-    enabled: !!id,
+    enabled: !!id && enabled,
+    staleTime: 60 * 60 * 1000, // cache for 1 hour — software rarely changes
   })
 }
 
-export function useMachineEventLogs(id) {
+export function useMachineEventLogs(id, enabled = true) {
   return useQuery({
     queryKey: ['machine-events', id],
     queryFn: async () => {
       const { data } = await client.get(`/machines/${id}/event-logs`)
       return data
     },
-    enabled: !!id,
+    enabled: !!id && enabled,
+    staleTime: 60 * 1000, // cache for 1 min
   })
 }
 

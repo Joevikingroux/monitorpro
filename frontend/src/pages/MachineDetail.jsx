@@ -20,9 +20,9 @@ export default function MachineDetail() {
   const { data: latest } = useLatestMetric(id)
   const { data: history = [] } = useMetricHistory(id, chartHours)
   const { data: procs = [] } = useProcesses(id)
-  const { data: svcs = [] } = useMachineServices(id)
-  const { data: software = [] } = useMachineSoftware(id)
-  const { data: eventLogs = [] } = useMachineEventLogs(id)
+  const { data: svcs = [], isFetching: svcsFetching } = useMachineServices(id, tab === 'Services')
+  const { data: software = [], isFetching: softwareFetching } = useMachineSoftware(id, tab === 'Software')
+  const { data: eventLogs = [], isFetching: eventLogsFetching } = useMachineEventLogs(id, tab === 'Event Logs')
   const [softwareSearch, setSoftwareSearch] = useState('')
   const [procSort, setProcSort] = useState('cpu')
 
@@ -162,8 +162,10 @@ export default function MachineDetail() {
 
       {tab === 'Services' && (
         <div className="rounded-n10 overflow-hidden" style={{ background: 'rgba(10,18,32,0.7)', border: '0.667px solid rgba(45,212,191,0.15)' }}>
-          {svcs.length === 0 ? (
-            <div className="p-8 text-center" style={{ color: 'rgb(100,116,139)' }}>No services data collected yet. The probe will send this on the next cycle.</div>
+          {svcsFetching && svcs.length === 0 ? (
+            <div className="p-8 text-center" style={{ color: '#2dd4bf' }}>Loading services...</div>
+          ) : svcs.length === 0 ? (
+            <div className="p-8 text-center" style={{ color: 'rgb(100,116,139)' }}>No services data collected yet. The probe sends this ~1 min after startup.</div>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -204,8 +206,10 @@ export default function MachineDetail() {
             style={{ background: 'rgb(5,10,18)', border: '0.667px solid rgba(45,212,191,0.15)', borderRadius: '8px', color: 'rgb(224,247,250)' }}
           />
           <div className="rounded-n10 overflow-hidden" style={{ background: 'rgba(10,18,32,0.7)', border: '0.667px solid rgba(45,212,191,0.15)' }}>
-            {software.length === 0 ? (
-              <div className="p-8 text-center" style={{ color: 'rgb(100,116,139)' }}>No software inventory collected yet.</div>
+            {softwareFetching && software.length === 0 ? (
+              <div className="p-8 text-center" style={{ color: '#2dd4bf' }}>Loading software inventory...</div>
+            ) : software.length === 0 ? (
+              <div className="p-8 text-center" style={{ color: 'rgb(100,116,139)' }}>No software inventory collected yet. The probe sends this once on startup.</div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
@@ -234,7 +238,9 @@ export default function MachineDetail() {
 
       {tab === 'Event Logs' && (
         <div className="rounded-n10 overflow-hidden" style={{ background: 'rgba(10,18,32,0.7)', border: '0.667px solid rgba(45,212,191,0.15)' }}>
-          {eventLogs.length === 0 ? (
+          {eventLogsFetching && eventLogs.length === 0 ? (
+            <div className="p-8 text-center" style={{ color: '#2dd4bf' }}>Loading event logs...</div>
+          ) : eventLogs.length === 0 ? (
             <div className="p-8 text-center" style={{ color: 'rgb(100,116,139)' }}>No event logs collected yet.</div>
           ) : (
             <table className="w-full text-sm">
