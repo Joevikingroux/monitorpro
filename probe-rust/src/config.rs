@@ -2,7 +2,7 @@
 pub const BAKED_SERVER_URL: Option<&str> = option_env!("SERVER_URL");
 pub const BAKED_COMPANY_TOKEN: Option<&str> = option_env!("COMPANY_TOKEN");
 
-pub const DEFAULT_SERVER_URL: &str = "https://your-vps.com:8443";
+pub const DEFAULT_SERVER_URL: &str = "https://monitor.numbers10.co.za:8443";
 pub const SERVICE_NAME: &str = "PCMonitorProbe";
 pub const SERVICE_DISPLAY: &str = "Numbers10 PC Monitor Probe";
 pub const SERVICE_DESC: &str =
