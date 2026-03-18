@@ -79,7 +79,7 @@ export default function MachineDetail() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 overflow-x-auto">
+      <div className="flex gap-1 mb-6 overflow-x-auto items-center">
         {TABS.map((t) => (
           <button
             key={t}
@@ -94,6 +94,24 @@ export default function MachineDetail() {
             {t}
           </button>
         ))}
+        <div className="flex-1" />
+        <button
+          onClick={() => {
+            if (!confirmDelete) { setConfirmDelete(true); setTimeout(() => setConfirmDelete(false), 3000); return; }
+            deleteMachine.mutate(id, { onSuccess: () => navigate('/dashboard') })
+          }}
+          className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg whitespace-nowrap transition-all"
+          style={{
+            background: confirmDelete ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)',
+            border: `1px solid ${confirmDelete ? '#ef4444' : 'rgba(239,68,68,0.5)'}`,
+            color: confirmDelete ? '#ef4444' : '#f87171',
+            cursor: 'pointer',
+            fontWeight: confirmDelete ? 700 : 500,
+          }}
+        >
+          <Trash2 size={13} />
+          {confirmDelete ? 'Confirm?' : 'Delete'}
+        </button>
       </div>
 
       {/* Tab Content */}
