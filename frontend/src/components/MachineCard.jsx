@@ -1,12 +1,25 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Monitor } from 'lucide-react'
+import { Monitor, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import MetricGauge from './MetricGauge'
+import { useDeleteMachine } from '../hooks/useMachines'
 
 export default function MachineCard({ machine, latestMetric }) {
   const navigate = useNavigate()
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const deleteMachine = useDeleteMachine()
   const isOnline = machine.is_online
+
+  function handleDelete(e) {
+    e.stopPropagation()
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      setTimeout(() => setConfirmDelete(false), 3000)
+      return
+    }
+    deleteMachine.mutate(machine.id)
+  }
   const cpu = latestMetric?.cpu_percent || 0
   const ram = latestMetric?.ram_percent || 0
 
@@ -105,15 +118,31 @@ export default function MachineCard({ machine, latestMetric }) {
         >
           {lastSeen}
         </span>
-        <span
-          className="text-xs px-1.5 py-0.5 rounded"
-          style={{
-            background: isOnline ? 'rgba(45,212,191,0.1)' : 'rgba(71,85,105,0.2)',
-            color: isOnline ? '#2dd4bf' : '#475569',
-          }}
-        >
-          {isOnline ? 'Online' : 'Offline'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className="text-xs px-1.5 py-0.5 rounded"
+            style={{
+              background: isOnline ? 'rgba(45,212,191,0.1)' : 'rgba(71,85,105,0.2)',
+              color: isOnline ? '#2dd4bf' : '#475569',
+            }}
+          >
+            {isOnline ? 'Online' : 'Offline'}
+          </span>
+          <button
+            onClick={handleDelete}
+            title={confirmDelete ? 'Click again to confirm delete' : 'Delete machine'}
+            className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded transition-all"
+            style={{
+              background: confirmDelete ? 'rgba(239,68,68,0.2)' : 'transparent',
+              border: `0.667px solid ${confirmDelete ? '#ef4444' : 'rgba(239,68,68,0.3)'}`,
+              color: confirmDelete ? '#ef4444' : 'rgba(239,68,68,0.6)',
+              cursor: 'pointer',
+            }}
+          >
+            <Trash2 size={11} />
+            {confirmDelete ? 'Confirm' : ''}
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -33,7 +33,37 @@ async def register_machine(request: MachineRegisterRequest, db: AsyncSession = D
     if not company:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid company token")
 
+    # Look up existing machine by MAC address within this company.
+    # This ensures reinstalls, resets, and re-registrations reuse the same
+    # machine record instead of creating duplicates.
+    existing = None
+    if request.mac_address and request.mac_address != "00:00:00:00:00:00":
+        result = await db.execute(
+            select(Machine).where(
+                Machine.company_id == company.id,
+                Machine.mac_address == request.mac_address,
+            )
+        )
+        existing = result.scalar_one_or_none()
+
     api_key = generate_api_key()
+
+    if existing:
+        # Update the existing record with fresh info and a new API key
+        existing.hostname = request.hostname
+        existing.os_version = request.os_version
+        existing.cpu_model = request.cpu_model
+        existing.total_ram_gb = request.total_ram_gb
+        existing.ip_address = request.ip_address
+        existing.api_key_hash = hash_api_key(api_key)
+        existing.last_seen = datetime.now(timezone.utc)
+        existing.is_online = True
+        db.add(existing)
+        await db.flush()
+        await db.refresh(existing)
+        return MachineRegisterResponse(machine_id=existing.id, api_key=api_key)
+
+    # No existing machine found — create a new record
     machine = Machine(
         company_id=company.id,
         hostname=request.hostname,
@@ -50,7 +80,6 @@ async def register_machine(request: MachineRegisterRequest, db: AsyncSession = D
     db.add(machine)
     await db.flush()
     await db.refresh(machine)
-
     return MachineRegisterResponse(machine_id=machine.id, api_key=api_key)
 
 
