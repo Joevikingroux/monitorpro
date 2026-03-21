@@ -36,6 +36,9 @@ services:
       DASHBOARD_URL: ${DASHBOARD_URL:-https://localhost:8443}
       RETENTION_DAYS: ${RETENTION_DAYS:-90}
       ALERT_CHECK_INTERVAL: ${ALERT_CHECK_INTERVAL:-30}
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     depends_on:
       db:
         condition: service_healthy

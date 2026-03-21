@@ -118,20 +118,20 @@ async def send_telegram_alert(
     severity_emoji = {"critical": "🔴", "warning": "🟡", "info": "🔵"}.get(rule.severity, "⚪")
 
     message = (
-        f"{severity_emoji} *Alert: {rule.name}*\n\n"
-        f"*Company:* {company_name}\n"
-        f"*Machine:* {machine.hostname}\n"
-        f"*Metric:* {rule.metric_field}\n"
-        f"*Value:* `{value}` ({rule.operator} {rule.threshold})\n"
-        f"*Severity:* {rule.severity.upper()}\n\n"
-        f"[View Dashboard]({settings.DASHBOARD_URL}/machines/{machine.id})"
+        f"{severity_emoji} <b>Alert: {rule.name}</b>\n\n"
+        f"<b>Company:</b> {company_name}\n"
+        f"<b>Machine:</b> {machine.hostname}\n"
+        f"<b>Metric:</b> {rule.metric_field}\n"
+        f"<b>Value:</b> <code>{value}</code> ({rule.operator} {rule.threshold})\n"
+        f"<b>Severity:</b> {rule.severity.upper()}\n\n"
+        f'<a href="{settings.DASHBOARD_URL}/machines/{machine.id}">View Dashboard →</a>'
     )
 
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"https://api.telegram.org/bot{token}/sendMessage",
-                json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
+                json={"chat_id": chat_id, "text": message, "parse_mode": "HTML"},
                 timeout=10,
             )
             if resp.status_code == 200:
