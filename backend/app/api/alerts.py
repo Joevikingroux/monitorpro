@@ -228,9 +228,39 @@ async def test_email(
             use_tls=settings.SMTP_PORT == 465,
             start_tls=settings.SMTP_PORT == 587,
         )
-        return {"message": f"Test email sent to {settings.ALERT_EMAIL}"}
+        return {
+            "message": f"Test email sent to {settings.ALERT_EMAIL}",
+            "config": {
+                "host": settings.SMTP_HOST,
+                "port": settings.SMTP_PORT,
+                "user": settings.SMTP_USER,
+                "from": settings.SMTP_FROM,
+                "to": settings.ALERT_EMAIL,
+                "tls": "SSL" if settings.SMTP_PORT == 465 else "STARTTLS" if settings.SMTP_PORT == 587 else "None",
+            }
+        }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        err = str(e)
+        # Translate common aiosmtplib errors into plain English
+        if "Name or service not known" in err or "nodename nor servname" in err:
+            detail = f"DNS failure — cannot resolve '{settings.SMTP_HOST}'. Check SMTP_HOST in .env."
+        elif "Connection refused" in err:
+            detail = f"Connection refused on {settings.SMTP_HOST}:{settings.SMTP_PORT}. Check SMTP_HOST and SMTP_PORT."
+        elif "timed out" in err.lower():
+            detail = f"Connection timed out to {settings.SMTP_HOST}:{settings.SMTP_PORT}. Server may be blocking the port."
+        elif "SMTPAuthenticationError" in err or "535" in err or "Authentication" in err or "authentication" in err:
+            detail = f"Authentication failed — wrong SMTP_USER or SMTP_PASSWORD. Server said: {err}"
+        elif "534" in err or "less secure" in err:
+            detail = "Server requires app-specific password or 2FA app password (e.g. Gmail). Check your mail provider's SMTP settings."
+        elif "530" in err or "STARTTLS" in err:
+            detail = f"Server requires STARTTLS but it failed. Try SMTP_PORT=587. Server said: {err}"
+        elif "SSL" in err or "ssl" in err or "certificate" in err.lower():
+            detail = f"SSL/TLS error — try switching SMTP_PORT between 465 and 587. Details: {err}"
+        elif "550" in err or "553" in err or "Sender" in err:
+            detail = f"Server rejected the sender address '{settings.SMTP_FROM}'. Check SMTP_FROM matches your mail account."
+        else:
+            detail = err
+        raise HTTPException(status_code=500, detail=detail)
 
 
 @router.post("/test/telegram")
