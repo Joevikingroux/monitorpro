@@ -69,7 +69,9 @@ export function useDeleteAlertEvent() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id) => {
-      await client.delete(`/alerts/events/${id}`)
+      await client.delete(`/alerts/events/${id}`).catch((e) => {
+        if (e?.response?.status !== 404) throw e  // 404 = already gone, ignore
+      })
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['alert-events'] })
