@@ -1,11 +1,42 @@
 import React, { useState } from 'react'
-import { Save } from 'lucide-react'
+import { Save, Send } from 'lucide-react'
 import useAuthStore from '../hooks/useAuth'
+import client from '../api/client'
 
 export default function Settings() {
   const changePassword = useAuthStore((s) => s.changePassword)
   const [pw, setPw] = useState({ current: '', new: '', confirm: '' })
   const [pwMsg, setPwMsg] = useState('')
+  const [emailTestMsg, setEmailTestMsg] = useState('')
+  const [emailTesting, setEmailTesting] = useState(false)
+  const [telegramTestMsg, setTelegramTestMsg] = useState('')
+  const [telegramTesting, setTelegramTesting] = useState(false)
+
+  const testEmail = async () => {
+    setEmailTesting(true)
+    setEmailTestMsg('')
+    try {
+      const { data } = await client.post('/alerts/test/email')
+      setEmailTestMsg({ ok: true, text: data.message })
+    } catch (e) {
+      setEmailTestMsg({ ok: false, text: e.response?.data?.detail || 'Failed' })
+    } finally {
+      setEmailTesting(false)
+    }
+  }
+
+  const testTelegram = async () => {
+    setTelegramTesting(true)
+    setTelegramTestMsg('')
+    try {
+      const { data } = await client.post('/alerts/test/telegram')
+      setTelegramTestMsg({ ok: true, text: data.message })
+    } catch (e) {
+      setTelegramTestMsg({ ok: false, text: e.response?.data?.detail || 'Failed' })
+    } finally {
+      setTelegramTesting(false)
+    }
+  }
 
   const handlePasswordChange = async (e) => {
     e.preventDefault()
@@ -44,25 +75,41 @@ export default function Settings() {
       {/* SMTP */}
       <Section title="Email (SMTP)">
         <p className="text-xs mb-3" style={{ color: 'rgb(100,116,139)' }}>
-          Configure in the .env file on the server: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
+          Configured via .env: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM, ALERT_EMAIL
         </p>
-        <div className="grid grid-cols-2 gap-3">
-          <input placeholder="SMTP Host" disabled className="px-3 py-2 text-sm opacity-50" style={inputStyle} />
-          <input placeholder="SMTP Port" disabled className="px-3 py-2 text-sm opacity-50" style={inputStyle} />
-          <input placeholder="SMTP User" disabled className="px-3 py-2 text-sm opacity-50" style={inputStyle} />
-          <input placeholder="From Address" disabled className="px-3 py-2 text-sm opacity-50" style={inputStyle} />
-        </div>
+        <button
+          onClick={testEmail}
+          disabled={emailTesting}
+          className="flex items-center gap-2 px-4 py-2 font-bold text-sm"
+          style={{ background: '#2dd4bf', color: '#000', borderRadius: '8px', opacity: emailTesting ? 0.6 : 1 }}
+        >
+          <Send size={14} /> {emailTesting ? 'Sending…' : 'Send Test Email'}
+        </button>
+        {emailTestMsg && (
+          <p className="text-sm mt-2" style={{ color: emailTestMsg.ok ? '#2dd4bf' : '#ef4444' }}>
+            {emailTestMsg.ok ? '✓' : '✗'} {emailTestMsg.text}
+          </p>
+        )}
       </Section>
 
       {/* Telegram */}
       <Section title="Telegram">
         <p className="text-xs mb-3" style={{ color: 'rgb(100,116,139)' }}>
-          Configure in .env: TELEGRAM_TOKEN and TELEGRAM_CHAT_ID. Per-company chat IDs can be set on the Companies page.
+          Configured via .env: TELEGRAM_TOKEN, TELEGRAM_CHAT_ID. Per-company chat IDs can be set on the Companies page.
         </p>
-        <div className="grid grid-cols-2 gap-3">
-          <input placeholder="Bot Token" disabled className="px-3 py-2 text-sm opacity-50" style={inputStyle} />
-          <input placeholder="Chat ID" disabled className="px-3 py-2 text-sm opacity-50" style={inputStyle} />
-        </div>
+        <button
+          onClick={testTelegram}
+          disabled={telegramTesting}
+          className="flex items-center gap-2 px-4 py-2 font-bold text-sm"
+          style={{ background: '#2dd4bf', color: '#000', borderRadius: '8px', opacity: telegramTesting ? 0.6 : 1 }}
+        >
+          <Send size={14} /> {telegramTesting ? 'Sending…' : 'Send Test Telegram'}
+        </button>
+        {telegramTestMsg && (
+          <p className="text-sm mt-2" style={{ color: telegramTestMsg.ok ? '#2dd4bf' : '#ef4444' }}>
+            {telegramTestMsg.ok ? '✓' : '✗'} {telegramTestMsg.text}
+          </p>
+        )}
       </Section>
 
       {/* Retention */}

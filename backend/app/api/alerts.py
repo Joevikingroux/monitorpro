@@ -193,6 +193,76 @@ async def acknowledge_event(
     return {"message": "Alert acknowledged"}
 
 
+@router.post("/test/email")
+async def test_email(
+    current_user: User = Depends(get_current_user),
+):
+    from app.core.config import settings
+    if not settings.SMTP_HOST:
+        raise HTTPException(status_code=400, detail="SMTP_HOST not configured in .env")
+    if not settings.ALERT_EMAIL:
+        raise HTTPException(status_code=400, detail="ALERT_EMAIL not configured in .env")
+    try:
+        import aiosmtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Numbers10 PCMonitor — Test Email"
+        msg["From"] = settings.SMTP_FROM
+        msg["To"] = settings.ALERT_EMAIL
+        msg.attach(MIMEText(
+            "<html><body style='background:#000;color:#94a3b8;font-family:Inter,sans-serif;padding:20px;'>"
+            "<div style='max-width:500px;margin:0 auto;background:rgba(10,18,32,0.9);"
+            "border:1px solid rgba(45,212,191,0.3);border-radius:12px;padding:24px;'>"
+            "<h2 style='color:#2dd4bf;margin:0 0 12px;'>✓ Test Email</h2>"
+            "<p style='color:#94a3b8;'>Your Numbers10 PCMonitor email notifications are working correctly.</p>"
+            "</div></body></html>",
+            "html"
+        ))
+        await aiosmtplib.send(
+            msg,
+            hostname=settings.SMTP_HOST,
+            port=settings.SMTP_PORT,
+            username=settings.SMTP_USER or None,
+            password=settings.SMTP_PASSWORD or None,
+            use_tls=settings.SMTP_PORT == 465,
+            start_tls=settings.SMTP_PORT == 587,
+        )
+        return {"message": f"Test email sent to {settings.ALERT_EMAIL}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/test/telegram")
+async def test_telegram(
+    current_user: User = Depends(get_current_user),
+):
+    from app.core.config import settings
+    if not settings.TELEGRAM_TOKEN:
+        raise HTTPException(status_code=400, detail="TELEGRAM_TOKEN not configured in .env")
+    if not settings.TELEGRAM_CHAT_ID:
+        raise HTTPException(status_code=400, detail="TELEGRAM_CHAT_ID not configured in .env")
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"https://api.telegram.org/bot{settings.TELEGRAM_TOKEN}/sendMessage",
+                json={
+                    "chat_id": settings.TELEGRAM_CHAT_ID,
+                    "text": "✅ <b>Numbers10 PCMonitor</b>\n\nTest message — Telegram notifications are working correctly.",
+                    "parse_mode": "HTML",
+                },
+                timeout=10,
+            )
+        if resp.status_code == 200:
+            return {"message": "Test Telegram message sent"}
+        raise HTTPException(status_code=500, detail=f"Telegram API error: {resp.text}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/events/unresolved")
 async def unresolved_events(
     current_user: User = Depends(get_current_user),
