@@ -29,6 +29,7 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-alerts@numbers10.co.za}
+      ALERT_EMAIL: ${ALERT_EMAIL:-}
       TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://localhost:8443}
