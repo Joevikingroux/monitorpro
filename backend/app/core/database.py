@@ -1,0 +1,54 @@
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import text
+from app.core.config import settings
+
+engine = create_async_engine(settings.DATABASE_URL, echo=False, pool_size=20, max_overflow=10)
+async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+async def get_db():
+    async with async_session() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+async def init_db():
+    from app.models import User, Company, Machine, Metric, AlertRule, AlertEvent  # noqa: F401
+    from app.models import WindowsService, SoftwareInventory, EventLog  # noqa: F401
+    from app.core.security import hash_password
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        # Add new columns to existing tables without a full migration
+        for stmt in [
+            "ALTER TABLE metrics ADD COLUMN IF NOT EXISTS firewall_enabled BOOLEAN",
+            "ALTER TABLE metrics ADD COLUMN IF NOT EXISTS av_status VARCHAR(255)",
+            "ALTER TABLE metrics ADD COLUMN IF NOT EXISTS last_boot_time TIMESTAMPTZ",
+            "ALTER TABLE metrics ADD COLUMN IF NOT EXISTS installed_updates INTEGER",
+        ]:
+            await conn.execute(text(stmt))
+
+    async with async_session() as session:
+        result = await session.execute(
+            text("SELECT COUNT(*) FROM users")
+        )
+        count = result.scalar()
+        if count == 0:
+            admin = User(
+                email="admin@numbers10.co.za",
+                hashed_password=hash_password("admin123"),
+                is_active=True,
+            )
+            session.add(admin)
+            await session.commit()

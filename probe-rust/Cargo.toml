@@ -1,0 +1,72 @@
+[package]
+name = "pcmonitor-probe"
+version = "1.0.0"
+edition = "2021"
+authors = ["Numbers10 Technology Solutions"]
+description = "Numbers10 PCMonitor Probe Agent"
+
+[[bin]]
+name = "PCMonitorProbe"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP client
+reqwest = { version = "0.12", default-features = false, features = ["json", "native-tls"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# System metrics
+sysinfo = "0.30"
+
+# Windows Service
+windows-service = "0.7"
+
+# Tray icon + menu
+tray-icon = "0.14"
+
+# GUI - immediate mode, works great for status windows
+eframe = { version = "0.27", default-features = false, features = ["default_fonts", "glow"] }
+egui = "0.27"
+
+# Image processing (PNG decode + arrow compositing)
+image = { version = "0.24", default-features = false, features = ["png"] }
+
+# Windows registry
+winreg = "0.52"
+
+# WMI — direct queries without PowerShell subprocess overhead
+wmi = "0.13"
+
+# Logging
+log = "0.4"
+log4rs = { version = "1", default-features = false, features = ["console_appender", "file_appender", "rolling_file_appender", "compound_policy", "size_trigger", "fixed_window_roller"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "1"
+
+# CLI args
+clap = { version = "4", features = ["derive"] }
+
+# Platform dirs (%ProgramData%, etc.)
+directories = "5"
+
+# Win32 API for reliable window show/hide in the tray app
+winapi = { version = "0.3", features = ["winuser", "winbase"] }
+
+[build-dependencies]
+winres = "0.1"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
