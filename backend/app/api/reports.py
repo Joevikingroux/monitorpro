@@ -44,7 +44,7 @@ def _build_pdf_machine(machine: Machine, metrics: list, from_dt, to_dt) -> bytes
     doc = SimpleDocTemplate(
         buf, pagesize=landscape(A4),
         leftMargin=18*mm, rightMargin=18*mm,
-        topMargin=15*mm, bottomMargin=15*mm,
+        topMargin=30*mm, bottomMargin=18*mm,
     )
 
     rl_teal   = colors.Color(*TEAL)
@@ -82,8 +82,14 @@ def _build_pdf_machine(machine: Machine, metrics: list, from_dt, to_dt) -> bytes
     max_cpu = max(cpu_vals) if cpu_vals else 0
     avg_ram = sum(ram_vals) / len(ram_vals) if ram_vals else 0
     max_ram = max(ram_vals) if ram_vals else 0
-    tot_sent = sum(net_sent) if net_sent else 0
-    tot_recv = sum(net_recv) if net_recv else 0
+    # net_sent_mb / net_recv_mb are cumulative counters — use delta (last - first)
+    delta_sent = (max(net_sent) - min(net_sent)) if len(net_sent) > 1 else (net_sent[0] if net_sent else 0)
+    delta_recv = (max(net_recv) - min(net_recv)) if len(net_recv) > 1 else (net_recv[0] if net_recv else 0)
+
+    def _fmt_mb(mb):
+        if mb >= 1024:
+            return f"{mb/1024:.2f} GB"
+        return f"{mb:.0f} MB"
 
     def stat_cell(label, value):
         return [Paragraph(label, hdr_lbl), Paragraph(value, hdr_val)]
@@ -93,8 +99,8 @@ def _build_pdf_machine(machine: Machine, metrics: list, from_dt, to_dt) -> bytes
         stat_cell("PEAK CPU",      f"{max_cpu:.1f}%"),
         stat_cell("AVG RAM",       f"{avg_ram:.1f}%"),
         stat_cell("PEAK RAM",      f"{max_ram:.1f}%"),
-        stat_cell("NET SENT",      f"{tot_sent/1024:.2f} GB" if tot_sent > 1024 else f"{tot_sent:.0f} MB"),
-        stat_cell("NET RECV",      f"{tot_recv/1024:.2f} GB" if tot_recv > 1024 else f"{tot_recv:.0f} MB"),
+        stat_cell("NET SENT",      _fmt_mb(delta_sent)),
+        stat_cell("NET RECV",      _fmt_mb(delta_recv)),
         stat_cell("DATA POINTS",   str(len(metrics))),
     ]]
     stat_table = Table(stat_data, colWidths=[35*mm]*7)
@@ -218,7 +224,7 @@ def _build_pdf_alerts(events: list, rules: dict, machines: dict, from_dt, to_dt)
     doc = SimpleDocTemplate(
         buf, pagesize=A4,
         leftMargin=18*mm, rightMargin=18*mm,
-        topMargin=15*mm, bottomMargin=15*mm,
+        topMargin=30*mm, bottomMargin=18*mm,
     )
 
     rl_teal  = colors.Color(*TEAL)
