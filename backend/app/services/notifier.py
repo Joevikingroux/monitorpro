@@ -35,10 +35,11 @@ async def send_email_alert(
     to_email = None
     if company and company.alert_email:
         to_email = company.alert_email
-    elif rule.notify_email and settings.SMTP_FROM:
-        to_email = settings.SMTP_FROM
+    elif settings.ALERT_EMAIL:
+        to_email = settings.ALERT_EMAIL
 
     if not to_email:
+        logger.warning("No recipient email configured (set ALERT_EMAIL in .env), skipping email alert")
         return
 
     subject = f"[{rule.severity.upper()}] {rule.name} — {machine.hostname}"
@@ -92,8 +93,8 @@ async def send_email_alert(
             port=settings.SMTP_PORT,
             username=settings.SMTP_USER or None,
             password=settings.SMTP_PASSWORD or None,
-            use_tls=False,
-            start_tls=True if settings.SMTP_PORT == 587 else False,
+            use_tls=settings.SMTP_PORT == 465,
+            start_tls=settings.SMTP_PORT == 587,
         )
         logger.info(f"Email alert sent to {to_email}: {subject}")
     except Exception as e:

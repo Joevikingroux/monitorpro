@@ -160,6 +160,20 @@ async def list_events(
     return responses
 
 
+@router.delete("/events/{event_id}")
+async def delete_event(
+    event_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(AlertEvent).where(AlertEvent.id == event_id))
+    event = result.scalar_one_or_none()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    await db.delete(event)
+    return {"message": "Event deleted"}
+
+
 @router.post("/events/{event_id}/acknowledge")
 async def acknowledge_event(
     event_id: int,

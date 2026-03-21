@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "alerts@numbers10.co.za"
+    ALERT_EMAIL: str = ""  # Recipient address for alert notifications
 
     TELEGRAM_TOKEN: str = ""
     TELEGRAM_CHAT_ID: str = ""

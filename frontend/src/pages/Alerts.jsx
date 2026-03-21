@@ -4,6 +4,7 @@ import { format } from 'date-fns'
 import {
   useAlertRules, useAlertEvents, useUnresolvedAlerts,
   useCreateAlertRule, useUpdateAlertRule, useDeleteAlertRule, useAcknowledgeAlert,
+  useDeleteAlertEvent,
 } from '../hooks/useAlerts'
 import { useMachines } from '../hooks/useMachines'
 import { useCompanies } from '../hooks/useCompanies'
@@ -24,6 +25,7 @@ export default function Alerts() {
   const updateRule = useUpdateAlertRule()
   const deleteRule = useDeleteAlertRule()
   const ackAlert = useAcknowledgeAlert()
+  const deleteEvent = useDeleteAlertEvent()
 
   const [form, setForm] = useState({
     name: '', company_id: '', machine_id: '', metric_field: 'cpu_percent',
@@ -126,11 +128,16 @@ export default function Alerts() {
                   {e.triggered_at ? format(new Date(e.triggered_at), 'yyyy-MM-dd HH:mm:ss') : ''}
                 </div>
               </div>
-              {!e.acknowledged && !e.resolved_at && (
-                <button onClick={() => ackAlert.mutateAsync(e.id)} className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded" style={{ border: '1px solid #2dd4bf', color: '#2dd4bf', background: 'transparent', borderRadius: '8px' }}>
-                  <Check size={12} /> Acknowledge
+              <div className="flex items-center gap-2">
+                {!e.acknowledged && !e.resolved_at && (
+                  <button onClick={() => ackAlert.mutateAsync(e.id)} className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded" style={{ border: '1px solid #2dd4bf', color: '#2dd4bf', background: 'transparent', borderRadius: '8px' }}>
+                    <Check size={12} /> Acknowledge
+                  </button>
+                )}
+                <button onClick={() => { if (confirm('Delete this alert event?')) deleteEvent.mutateAsync(e.id) }} className="px-3 py-1.5 text-xs font-bold rounded" style={{ border: '1px solid #ef4444', color: '#ef4444', background: 'transparent', borderRadius: '8px' }}>
+                  Delete
                 </button>
-              )}
+              </div>
             </div>
           ))}
         </div>

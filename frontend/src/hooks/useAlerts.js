@@ -65,6 +65,19 @@ export function useDeleteAlertRule() {
   })
 }
 
+export function useDeleteAlertEvent() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      await client.delete(`/alerts/events/${id}`)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['alert-events'] })
+      qc.invalidateQueries({ queryKey: ['unresolved-alerts'] })
+    },
+  })
+}
+
 export function useAcknowledgeAlert() {
   const qc = useQueryClient()
   return useMutation({
