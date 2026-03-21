@@ -19,7 +19,7 @@ class AlertRule(Base):
     notify_email = Column(Boolean, default=False)
     notify_telegram = Column(Boolean, default=False)
 
-    events = relationship("AlertEvent", back_populates="rule", lazy="dynamic")
+    events = relationship("AlertEvent", back_populates="rule", cascade="all, delete-orphan")
 
 
 class AlertEvent(Base):

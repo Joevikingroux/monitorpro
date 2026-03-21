@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -101,6 +101,8 @@ async def delete_rule(
     rule = result.scalar_one_or_none()
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
+    # Delete associated events first to avoid NOT NULL FK constraint error
+    await db.execute(delete(AlertEvent).where(AlertEvent.rule_id == rule_id))
     await db.delete(rule)
     return {"message": "Rule deleted"}
 
