@@ -711,6 +711,20 @@ impl InstallerApp {
 
 // ── Entry point ───────────────────────────────────────────────────────────
 
+fn load_icon() -> std::sync::Arc<egui::IconData> {
+    if let Ok(img) = image::load_from_memory(LOGO_BYTES) {
+        let rgba = img
+            .resize_exact(64, 64, image::imageops::FilterType::Lanczos3)
+            .to_rgba8();
+        return std::sync::Arc::new(egui::IconData {
+            rgba: rgba.into_raw(),
+            width: 64,
+            height: 64,
+        });
+    }
+    std::sync::Arc::new(egui::IconData { rgba: vec![], width: 0, height: 0 })
+}
+
 pub fn run() {
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -719,7 +733,8 @@ pub fn run() {
             .with_min_inner_size([500.0, 580.0])
             .with_resizable(false)
             .with_visible(true)
-            .with_taskbar(true),
+            .with_taskbar(true)
+            .with_icon(load_icon()),
         centered: true,
         ..Default::default()
     };
