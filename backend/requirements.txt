@@ -12,3 +12,4 @@ apscheduler==3.10.4
 aiosmtplib==3.0.1
 httpx==0.26.0
 python-multipart==0.0.6
+reportlab==4.1.0
