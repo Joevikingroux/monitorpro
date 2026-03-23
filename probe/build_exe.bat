@@ -29,7 +29,9 @@ if defined COMPANY_TOKEN (
     echo [BUILD] No company token — probe will use config.ini
 )
 
-echo [BUILD] Building PCMonitorProbe_Setup.exe ...
+echo.
+echo [BUILD] Step 1/2: Building PCMonitorProbe_Setup.exe ...
+echo.
 
 pyinstaller ^
     --onefile ^
@@ -51,14 +53,43 @@ pyinstaller ^
     %EXTRA_DATA% ^
     probe_agent.py
 
-if %ERRORLEVEL% EQU 0 (
-    echo [BUILD] Success! Output: dist\PCMonitorProbe_Setup.exe
-    if defined COMPANY_TOKEN (
-        del embedded_token.txt 2>NUL
-        echo [BUILD] Cleaned up embedded_token.txt
-    )
-) else (
-    echo [BUILD] Build failed!
+if %ERRORLEVEL% NEQ 0 (
+    echo [BUILD] Service EXE build failed!
+    goto :cleanup
+)
+echo [BUILD] Service EXE built successfully.
+
+echo.
+echo [BUILD] Step 2/2: Building PCMonitorTray.exe ...
+echo.
+
+pyinstaller ^
+    --onefile ^
+    --windowed ^
+    --name PCMonitorTray ^
+    --icon=NUL ^
+    --hidden-import=pystray._win32 ^
+    --hidden-import=win32serviceutil ^
+    --hidden-import=win32service ^
+    tray_app.py
+
+if %ERRORLEVEL% NEQ 0 (
+    echo [BUILD] Tray EXE build failed!
+    goto :cleanup
+)
+echo [BUILD] Tray EXE built successfully.
+
+echo.
+echo [BUILD] ============================================
+echo [BUILD]   Both EXEs ready in dist\
+echo [BUILD]     - PCMonitorProbe_Setup.exe  (service + installer)
+echo [BUILD]     - PCMonitorTray.exe         (system tray monitor)
+echo [BUILD] ============================================
+
+:cleanup
+if defined COMPANY_TOKEN (
+    del embedded_token.txt 2>NUL
+    echo [BUILD] Cleaned up embedded_token.txt
 )
 
 endlocal

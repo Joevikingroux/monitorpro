@@ -154,6 +154,24 @@ def register_machine(config, config_path, logger):
         return None
 
 
+def write_status(connected, error=None):
+    """Write status file for the tray app to read."""
+    status_path = os.path.join(get_base_dir(), "probe_status.json")
+    tmp_path = status_path + ".tmp"
+    try:
+        import json as _json
+        data = {
+            "connected": connected,
+            "last_update": datetime.utcnow().isoformat(),
+            "error": error,
+        }
+        with open(tmp_path, "w") as f:
+            _json.dump(data, f)
+        os.replace(tmp_path, status_path)
+    except Exception:
+        pass
+
+
 class ProbeWorker:
     def __init__(self, config, config_path, logger):
         self.config = config
@@ -226,12 +244,17 @@ class ProbeWorker:
             if self._post("/api/metrics/ingest/batch", {"metrics": batch}):
                 self.metric_queue.clear()
                 self.logger.info(f"Batch sent {len(batch)} queued metrics")
+                write_status(True)
             else:
                 self.metric_queue.append(metric)
+                write_status(False, "Connection failed")
         else:
             if not self._post("/api/metrics/ingest", metric):
                 self.metric_queue.append(metric)
                 self.logger.warning("Metric queued for retry")
+                write_status(False, "Connection failed")
+            else:
+                write_status(True)
 
     def collect_services(self):
         now = time.time()
@@ -302,6 +325,7 @@ class ProbeWorker:
 
     def stop(self):
         self.running = False
+        write_status(False, "Service stopping")
         if self.metric_queue:
             self.logger.info(f"Flushing {len(self.metric_queue)} queued metrics")
             batch = list(self.metric_queue)
@@ -381,13 +405,181 @@ def run_standalone():
         logger.info("Probe stopped by user")
 
 
+def run_setup_wizard():
+    """Interactive configuration wizard — runs when exe is double-clicked."""
+    print()
+    print("=" * 55)
+    print("  Numbers10 PCMonitor Probe — Setup Wizard")
+    print("=" * 55)
+    print()
+
+    # Load existing config
+    config, config_path = load_config()
+    existing_url = config.get("server", "url", fallback="https://your-vps.com:8443")
+    existing_token = config.get("server", "company_token", fallback="")
+    existing_ssl = config.getboolean("server", "verify_ssl", fallback=True)
+
+    # Step 1: Server URL
+    print("  Step 1: Server URL")
+    print(f"    Current: {existing_url}")
+    url = input(f"    Enter server URL [{existing_url}]: ").strip()
+    if not url:
+        url = existing_url
+    if not url.startswith("http"):
+        url = "https://" + url
+    print()
+
+    # Step 2: Company Token
+    print("  Step 2: Company Token")
+    print("    (Copy from the dashboard: Companies > Copy Token)")
+    if existing_token and existing_token != "COMPANY_SPECIFIC_TOKEN_HERE":
+        print(f"    Current: {existing_token[:8]}...{existing_token[-4:]}")
+        token = input(f"    Enter token [keep existing]: ").strip()
+        if not token:
+            token = existing_token
+    else:
+        token = ""
+        while not token:
+            token = input("    Enter company token: ").strip()
+            if not token:
+                print("    Token is required!")
+    print()
+
+    # Step 3: SSL verification
+    print("  Step 3: SSL Certificate Verification")
+    ssl_default = "Y" if existing_ssl else "N"
+    ssl_input = input(f"    Verify SSL? (Y/n) [{ssl_default}]: ").strip().lower()
+    if ssl_input == "n":
+        verify_ssl = False
+        print("    SSL verification disabled (for self-signed certs)")
+    else:
+        verify_ssl = True
+    print()
+
+    # Step 4: Test connection
+    print("  Testing connection...")
+    try:
+        resp = requests.get(
+            f"{url}/api/health",
+            verify=verify_ssl,
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            print("    Connection successful!")
+        else:
+            print(f"    Server responded with {resp.status_code}")
+    except requests.exceptions.SSLError:
+        print("    SSL error! If using self-signed certs, set verify_ssl = N")
+        if verify_ssl:
+            retry = input("    Disable SSL verification? (y/N): ").strip().lower()
+            if retry == "y":
+                verify_ssl = False
+                print("    SSL verification disabled.")
+    except requests.exceptions.ConnectionError:
+        print(f"    Could not connect to {url}")
+        print("    The service will retry once started.")
+    except Exception as e:
+        print(f"    Connection test failed: {e}")
+    print()
+
+    # Step 5: Save config
+    if not config.has_section("server"):
+        config.add_section("server")
+    config.set("server", "url", url)
+    config.set("server", "company_token", token)
+    config.set("server", "verify_ssl", str(verify_ssl).lower())
+    if not config.has_option("server", "ingest_interval_seconds"):
+        config.set("server", "ingest_interval_seconds", "30")
+    if not config.has_section("hardware"):
+        config.add_section("hardware")
+    if not config.has_option("hardware", "use_open_hardware_monitor"):
+        config.set("hardware", "use_open_hardware_monitor", "false")
+
+    save_config(config, config_path)
+    print("  Configuration saved!")
+    print()
+
+    # Step 6: Install service
+    install = input("  Install as Windows Service now? (Y/n): ").strip().lower()
+    if install != "n":
+        print()
+        print("  Installing service...")
+        try:
+            sys.argv = [sys.argv[0], "install"]
+            win32serviceutil.HandleCommandLine(PCMonitorProbeService)
+        except Exception as e:
+            print(f"  Error: {e}")
+            print("  Make sure you run as Administrator!")
+        print()
+
+        # Auto-start the service
+        print("  Starting service...")
+        try:
+            time.sleep(1)
+            win32serviceutil.StartService(SERVICE_NAME)
+            time.sleep(2)
+            status = win32serviceutil.QueryServiceStatus(SERVICE_NAME)
+            if status[1] == 4:  # SERVICE_RUNNING
+                print("  Service is running!")
+            else:
+                print("  Service may still be starting...")
+        except Exception as e:
+            print(f"  Could not start service: {e}")
+            print("  Try: net start PCMonitorProbe")
+        print()
+
+        # Step 7: Add tray app to startup and launch it
+        tray_path = os.path.join(get_base_dir(), "PCMonitorTray.exe")
+        if os.path.exists(tray_path):
+            add_tray = input("  Add system tray monitor to Windows startup? (Y/n): ").strip().lower()
+            if add_tray != "n":
+                try:
+                    import winreg
+                    key = winreg.OpenKey(
+                        winreg.HKEY_CURRENT_USER,
+                        r"Software\Microsoft\Windows\CurrentVersion\Run",
+                        0, winreg.KEY_SET_VALUE,
+                    )
+                    winreg.SetValueEx(key, "PCMonitorTray", 0, winreg.REG_SZ, tray_path)
+                    winreg.CloseKey(key)
+                    print("  Tray app added to startup!")
+                except Exception as e:
+                    print(f"  Could not add to startup: {e}")
+
+                # Launch tray app now
+                print("  Launching tray monitor...")
+                try:
+                    import subprocess
+                    subprocess.Popen(
+                        [tray_path],
+                        creationflags=0x00000008,  # DETACHED_PROCESS
+                    )
+                    print("  Tray icon should appear by the clock.")
+                except Exception as e:
+                    print(f"  Could not launch tray: {e}")
+                print()
+    else:
+        print()
+        print(f"  Run '{os.path.basename(sys.executable)} install' as Admin to install later.")
+        print()
+
+    print("=" * 55)
+    print("  Setup complete!")
+    print("=" * 55)
+    input("\n  Press Enter to exit...")
+
+
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        # Running as service
-        servicemanager.Initialize()
-        servicemanager.PrepareToHostSingle(PCMonitorProbeService)
-        servicemanager.StartServiceCtrlDispatcher()
-    elif "--standalone" in sys.argv:
+    if "--standalone" in sys.argv:
         run_standalone()
+    elif len(sys.argv) == 1:
+        # Double-clicked or run without args — detect if launched by SCM
+        try:
+            servicemanager.Initialize()
+            servicemanager.PrepareToHostSingle(PCMonitorProbeService)
+            servicemanager.StartServiceCtrlDispatcher()
+        except Exception:
+            # Not launched by SCM — run the setup wizard
+            run_setup_wizard()
     else:
         win32serviceutil.HandleCommandLine(PCMonitorProbeService)
