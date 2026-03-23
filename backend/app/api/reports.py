@@ -4,7 +4,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -13,7 +13,7 @@ from app.models.user import User
 from app.models.metric import Metric
 from app.models.alert import AlertEvent, AlertRule
 from app.models.machine import Machine
-from app.models.company import Company
+
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -38,7 +38,6 @@ def _build_pdf_machine(machine: Machine, metrics: list, from_dt, to_dt) -> bytes
         SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
     )
     from reportlab.lib.styles import ParagraphStyle
-    from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -49,11 +48,8 @@ def _build_pdf_machine(machine: Machine, metrics: list, from_dt, to_dt) -> bytes
 
     rl_teal   = colors.Color(*TEAL)
     rl_navy   = colors.Color(*DARK_NAVY)
-    rl_mid    = colors.Color(*MID_NAVY)
     rl_slate  = colors.Color(*SLATE)
     rl_lgrey  = colors.Color(*LIGHT_GREY)
-    rl_red    = colors.Color(*RED)
-    rl_amber  = colors.Color(*AMBER)
 
     h1 = ParagraphStyle("h1", fontName="Helvetica-Bold", fontSize=20,
                         textColor=rl_navy, spaceAfter=2)
@@ -189,7 +185,7 @@ def _build_pdf_machine(machine: Machine, metrics: list, from_dt, to_dt) -> bytes
 
     story = [
         Spacer(1, 6*mm),
-        Paragraph(f"Machine Metrics Report", h1),
+        Paragraph("Machine Metrics Report", h1),
         Paragraph(f"{machine.hostname}  ·  {machine.os_version or ''}  ·  {machine.ip_address or ''}", body),
         HRFlowable(width="100%", thickness=1, color=rl_teal, spaceAfter=8),
         Paragraph(f"Period: {from_str}  →  {to_str}", small),
@@ -236,10 +232,8 @@ def _build_pdf_alerts(events: list, rules: dict, machines: dict, from_dt, to_dt)
 
     h1    = ParagraphStyle("h1", fontName="Helvetica-Bold", fontSize=18, textColor=rl_navy, spaceAfter=2)
     h2    = ParagraphStyle("h2", fontName="Helvetica-Bold", fontSize=11, textColor=rl_teal, spaceAfter=6)
-    body  = ParagraphStyle("body", fontName="Helvetica", fontSize=9, textColor=colors.Color(*TEXT_DARK))
     small = ParagraphStyle("small", fontName="Helvetica", fontSize=8, textColor=colors.Color(*SLATE))
     lbl   = ParagraphStyle("lbl", fontName="Helvetica", fontSize=7, textColor=colors.Color(*SLATE), spaceAfter=1)
-    val   = ParagraphStyle("val", fontName="Helvetica-Bold", fontSize=13, textColor=rl_navy)
 
     generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     from_str  = from_dt.strftime("%Y-%m-%d") if from_dt else "All time"
