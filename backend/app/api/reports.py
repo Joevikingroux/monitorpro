@@ -367,6 +367,9 @@ async def export_machine_metrics(
 ):
     machine_result = await db.execute(select(Machine).where(Machine.id == machine_id))
     machine = machine_result.scalar_one_or_none()
+    if machine is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Machine not found")
 
     query = select(Metric).where(Metric.machine_id == machine_id)
     if from_dt:
