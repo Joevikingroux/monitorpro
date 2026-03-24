@@ -88,7 +88,7 @@ export default function Login() {
               }}
               onFocus={(e) => (e.target.style.borderColor = '#2dd4bf')}
               onBlur={(e) => (e.target.style.borderColor = 'rgba(45,212,191,0.15)')}
-              placeholder="admin@numbers10.co.za"
+              placeholder="you@example.com"
             />
           </div>
 

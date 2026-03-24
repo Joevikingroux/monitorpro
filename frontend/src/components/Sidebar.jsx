@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, Building2, Bell, FileText, Settings,
+  LayoutDashboard, Building2, Bell, FileText, Settings, Download,
   LogOut, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import useAuthStore from '../hooks/useAuth'
@@ -12,6 +12,7 @@ const navItems = [
   { path: '/companies', label: 'Companies', icon: Building2 },
   { path: '/alerts', label: 'Alerts', icon: Bell, badge: true },
   { path: '/reports', label: 'Reports', icon: FileText },
+  { path: '/downloads', label: 'Downloads', icon: Download },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]
 

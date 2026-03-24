@@ -13,6 +13,7 @@ from app.api.metrics import router as metrics_router
 from app.api.alerts import router as alerts_router
 from app.api.reports import router as reports_router
 from app.api.companies import router as companies_router
+from app.api.downloads import router as downloads_router
 from app.services.alert_engine import run_alert_check
 from app.services.retention import run_retention_cleanup
 
@@ -76,6 +77,7 @@ app.include_router(metrics_router)
 app.include_router(alerts_router)
 app.include_router(reports_router)
 app.include_router(companies_router)
+app.include_router(downloads_router)
 
 
 @app.get("/api/health")

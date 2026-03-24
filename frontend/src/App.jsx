@@ -10,6 +10,7 @@ import MachineDetail from './pages/MachineDetail'
 import Alerts from './pages/Alerts'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
+import Downloads from './pages/Downloads'
 
 function ProtectedRoute() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/machines/:id" element={<MachineDetail />} />
         <Route path="/alerts" element={<Alerts />} />
         <Route path="/reports" element={<Reports />} />
+        <Route path="/downloads" element={<Downloads />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>
