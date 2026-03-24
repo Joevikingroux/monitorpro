@@ -100,7 +100,9 @@ impl InstallerApp {
         } else {
             // If a company token is baked into this EXE, skip the wizard and
             // install automatically as soon as the first frame renders.
-            let auto_install = !company_token.is_empty();
+            // Only auto-install if token is a real token, not the build placeholder.
+            let auto_install = !company_token.is_empty()
+                && company_token != "X".repeat(64);
             Self {
                 page: if auto_install { Page::Installing } else { Page::Welcome },
                 logo,
