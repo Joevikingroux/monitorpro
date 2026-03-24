@@ -79,11 +79,11 @@ export default function Downloads() {
       setProgress(100)
 
       // Trigger download
-      const blob = new Blob(chunks, { type: 'application/zip' })
+      const blob = new Blob(chunks, { type: 'application/octet-stream' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `PCMonitorProbe_${selectedCompany?.slug ?? selectedCompanyId}.zip`
+      a.download = `PCMonitorProbe_${selectedCompany?.slug ?? selectedCompanyId}.exe`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -211,7 +211,7 @@ export default function Downloads() {
             {status === 'done' && (
               <div className="flex items-center gap-2 p-3 mb-4 rounded-lg text-sm" style={{ background: 'rgba(45,212,191,0.08)', border: '0.667px solid rgba(45,212,191,0.3)', color: '#2dd4bf' }}>
                 <CheckCircle size={15} />
-                Download started. Extract the ZIP and run PCMonitorProbe_Setup.exe as Administrator.
+                Download started. Right-click the EXE → Run as Administrator. Installs silently with no prompts.
               </div>
             )}
             {status === 'missing' && (
@@ -251,8 +251,8 @@ export default function Downloads() {
             {/* Help text */}
             {status === 'idle' && (
               <p className="text-xs mt-4 text-center" style={{ color: 'rgb(100,116,139)' }}>
-                Builds a ZIP containing the probe EXE with the company token baked in.
-                Extract and run as admin — no configuration required.
+                Builds a company-specific EXE with the token baked in.
+                Run as Administrator — installs silently, no configuration required.
               </p>
             )}
           </div>

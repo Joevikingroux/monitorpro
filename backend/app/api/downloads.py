@@ -1,6 +1,4 @@
-import io
 import os
-import zipfile
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -19,20 +17,19 @@ DOWNLOADS_DIR = os.environ.get(
     os.path.join(os.path.dirname(__file__), "..", "..", "downloads"),
 )
 
-SERVER_URL = os.environ.get("PUBLIC_URL", "https://monitor.numbers10.co.za")
+# Must match the placeholder baked into the base EXE at build time.
+# Exactly 64 uppercase X characters — same length as secrets.token_hex(32).
+_PLACEHOLDER = b"X" * 64
 
 
 def _find_base_exe() -> str | None:
-    """Return path to the first .exe found in DOWNLOADS_DIR, newest first."""
     if not os.path.isdir(DOWNLOADS_DIR):
         return None
     exes = sorted(
         (f for f in os.listdir(DOWNLOADS_DIR) if f.endswith(".exe")),
         reverse=True,
     )
-    if not exes:
-        return None
-    return os.path.join(DOWNLOADS_DIR, exes[0])
+    return os.path.join(DOWNLOADS_DIR, exes[0]) if exes else None
 
 
 @router.post("/build/{company_id}")
@@ -42,10 +39,11 @@ async def build_company_probe(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Regenerate the company token, bundle the base probe EXE with the token
-    baked in as embedded_token.txt, and return a ready-to-deploy ZIP.
+    Regenerate the company token, patch it into the base EXE by replacing the
+    known placeholder bytes, and return the customised EXE for download.
 
-    The client extracts the ZIP, runs PCMonitorProbe_Setup.exe as admin — done.
+    The client runs the EXE as Administrator — it installs silently with no
+    prompts because the token is already baked in.
     """
     result = await db.execute(select(Company).where(Company.id == company_id))
     company = result.scalar_one_or_none()
@@ -56,60 +54,32 @@ async def build_company_probe(
     if not exe_path:
         raise HTTPException(
             status_code=404,
-            detail=(
-                "Base probe EXE not found. Place PCMonitorProbe_Setup.exe "
-                "into the downloads/ folder at the repo root."
-            ),
+            detail="Base EXE not found. Place PCMonitorProbeV1.0.0.exe into the downloads/ folder.",
         )
 
-    # Regenerate company token — store hash, embed plain text in the package
-    token = generate_api_key()
+    # Regenerate company token
+    token = generate_api_key()           # 64-char hex string
     company.token_hash = hash_api_key(token)
     db.add(company)
     await db.flush()
 
-    config_ini = (
-        f"[server]\n"
-        f"url = {SERVER_URL}\n"
-        f"company_token = {token}\n"
-        f"api_key =\n"
-        f"ingest_interval_seconds = 30\n"
-        f"verify_ssl = true\n"
-        f"\n"
-        f"[alerts]\n"
-        f"local_alert_log = true\n"
-        f"\n"
-        f"[hardware]\n"
-        f"use_open_hardware_monitor = false\n"
-    )
+    # Binary-patch the placeholder with the real token
+    base_bytes = open(exe_path, "rb").read()
+    if _PLACEHOLDER not in base_bytes:
+        raise HTTPException(
+            status_code=500,
+            detail="Base EXE does not contain the expected placeholder. Rebuild with COMPANY_TOKEN=XXX...XXX.",
+        )
 
-    install_txt = (
-        f"Numbers10 PCMonitor Probe — {company.name}\n"
-        f"{'=' * 50}\n\n"
-        f"1. Extract all files to C:\\PCMonitorProbe\\\n"
-        f"2. Right-click PCMonitorProbe_Setup.exe\n"
-        f"3. Select 'Run as administrator'\n"
-        f"4. The probe installs as a Windows Service and starts automatically.\n"
-        f"5. This machine will appear in the dashboard under '{company.name}' within 30 seconds.\n\n"
-        f"Server: {SERVER_URL}\n"
-        f"Company: {company.name}\n"
-    )
+    token_bytes = token.encode("ascii")   # also 64 bytes
+    patched = base_bytes.replace(_PLACEHOLDER, token_bytes, 1)
 
-    # Build ZIP in memory
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as zf:
-        zf.write(exe_path, "PCMonitorProbe_Setup.exe")
-        zf.writestr("embedded_token.txt", token + "\n")
-        zf.writestr("config.ini", config_ini)
-        zf.writestr("INSTALL.txt", install_txt)
-    zip_bytes = buf.getvalue()
-
-    filename = f"PCMonitorProbe_{company.slug}.zip"
+    filename = f"PCMonitorProbe_{company.slug}.exe"
     return StreamingResponse(
-        io.BytesIO(zip_bytes),
-        media_type="application/zip",
+        iter([patched]),
+        media_type="application/octet-stream",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
-            "Content-Length": str(len(zip_bytes)),
+            "Content-Length": str(len(patched)),
         },
     )
