@@ -166,6 +166,49 @@ export default function Downloads() {
         <span style={pillStyle}>DOWNLOADS</span>
       </div>
 
+      {/* Probe download — always visible */}
+      <div className="p-6 mb-4" style={cardStyle}>
+        <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'rgb(100,116,139)' }}>
+          Probe Installer
+        </p>
+        <p className="text-xs mb-4" style={{ color: 'rgb(148,163,184)' }}>
+          Windows Service that collects metrics and reports to this dashboard. Run as Administrator on each client PC.
+        </p>
+
+        {probeStatus === 'missing' && (
+          <div className="flex items-start gap-2 p-3 mb-4 rounded-lg text-xs" style={{ background: 'rgba(245,158,11,0.08)', border: '0.667px solid rgba(245,158,11,0.3)', color: 'rgb(245,158,11)' }}>
+            <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+            <span>Installer not found on server. Place the <code className="font-mono" style={{ color: 'rgb(224,247,250)' }}>.exe</code> into the <code className="font-mono" style={{ color: 'rgb(224,247,250)' }}>downloads/</code> folder at the repo root.</span>
+          </div>
+        )}
+        {probeStatus === 'error' && (
+          <div className="flex items-center gap-2 p-3 mb-4 rounded-lg text-xs" style={{ background: 'rgba(239,68,68,0.08)', border: '0.667px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
+            <AlertTriangle size={14} /> Download failed — please try again.
+          </div>
+        )}
+        {probeStatus === 'done' && (
+          <div className="flex items-center gap-2 p-3 mb-4 rounded-lg text-xs" style={{ background: 'rgba(45,212,191,0.08)', border: '0.667px solid rgba(45,212,191,0.3)', color: '#2dd4bf' }}>
+            <Check size={14} /> Download started — check your browser downloads.
+          </div>
+        )}
+
+        <button
+          onClick={downloadProbe}
+          disabled={probeStatus === 'downloading'}
+          className="flex items-center gap-2 px-5 py-2.5 font-bold text-sm"
+          style={{
+            background: '#2dd4bf',
+            color: '#000',
+            borderRadius: '8px',
+            opacity: probeStatus === 'downloading' ? 0.6 : 1,
+            cursor: probeStatus === 'downloading' ? 'wait' : 'pointer',
+          }}
+        >
+          <Download size={16} />
+          {probeStatus === 'downloading' ? 'Downloading…' : 'Download PCMonitorProbe_Setup.exe'}
+        </button>
+      </div>
+
       {/* Step 1 — Select company */}
       <div className="p-6 mb-4" style={cardStyle}>
         <p className="text-xs uppercase tracking-wider mb-2" style={{ color: 'rgb(100,116,139)' }}>
@@ -267,56 +310,6 @@ export default function Downloads() {
             >
               {configPreview}
             </pre>
-          </div>
-
-          {/* Download installer */}
-          <div className="p-6 mb-4" style={cardStyle}>
-            <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'rgb(100,116,139)' }}>
-              Step 4 — Download Installer
-            </p>
-            <p className="text-xs mb-4" style={{ color: 'rgb(148,163,184)' }}>
-              Download URL:{' '}
-              <span className="font-mono" style={{ color: '#2dd4bf', fontSize: 11 }}>
-                {SERVER_URL}/api/downloads/probe
-              </span>
-            </p>
-
-            {probeStatus === 'missing' && (
-              <div className="flex items-start gap-2 p-3 mb-4 rounded-lg text-xs" style={{ background: 'rgba(245,158,11,0.08)', border: '0.667px solid rgba(245,158,11,0.3)', color: 'rgb(245,158,11)' }}>
-                <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
-                <span>
-                  Installer not found on server. Place the <code className="font-mono" style={{ color: 'rgb(224,247,250)' }}>.exe</code> into the <code className="font-mono" style={{ color: 'rgb(224,247,250)' }}>downloads/</code> folder at the repo root.
-                </span>
-              </div>
-            )}
-
-            {probeStatus === 'error' && (
-              <div className="flex items-center gap-2 p-3 mb-4 rounded-lg text-xs" style={{ background: 'rgba(239,68,68,0.08)', border: '0.667px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
-                <AlertTriangle size={14} /> Download failed — please try again.
-              </div>
-            )}
-
-            {probeStatus === 'done' && (
-              <div className="flex items-center gap-2 p-3 mb-4 rounded-lg text-xs" style={{ background: 'rgba(45,212,191,0.08)', border: '0.667px solid rgba(45,212,191,0.3)', color: '#2dd4bf' }}>
-                <Check size={14} /> Download started — check your browser downloads.
-              </div>
-            )}
-
-            <button
-              onClick={downloadProbe}
-              disabled={probeStatus === 'downloading'}
-              className="flex items-center gap-2 px-5 py-2.5 font-bold text-sm"
-              style={{
-                background: '#2dd4bf',
-                color: '#000',
-                borderRadius: '8px',
-                opacity: probeStatus === 'downloading' ? 0.6 : 1,
-                cursor: probeStatus === 'downloading' ? 'wait' : 'pointer',
-              }}
-            >
-              <Download size={16} />
-              {probeStatus === 'downloading' ? 'Downloading…' : 'Download PCMonitorProbe_Setup.exe'}
-            </button>
           </div>
 
           {/* Install steps */}
