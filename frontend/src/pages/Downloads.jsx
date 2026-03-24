@@ -26,6 +26,7 @@ export default function Downloads() {
   const [progress, setProgress] = useState(0)
   const [errorMsg, setErrorMsg] = useState('')
   const [cleanStatus, setCleanStatus] = useState('idle') // idle | downloading | done | error
+  const [cleanError, setCleanError] = useState('')
 
   const { data: companies = [] } = useQuery({
     queryKey: ['companies'],
@@ -104,9 +105,15 @@ export default function Downloads() {
 
   const downloadClean = async () => {
     setCleanStatus('downloading')
+    setCleanError('')
     try {
       const response = await fetch('/api/downloads/probe')
-      if (!response.ok) { setCleanStatus('error'); return }
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        setCleanError(data.detail || `Server returned ${response.status}`)
+        setCleanStatus('error')
+        return
+      }
       const blob = await response.blob()
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
@@ -114,8 +121,10 @@ export default function Downloads() {
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
+      URL.revokeObjectURL(a.href)
       setCleanStatus('done')
-    } catch {
+    } catch (e) {
+      setCleanError(e.message || 'Network error')
       setCleanStatus('error')
     }
   }
@@ -189,17 +198,23 @@ export default function Downloads() {
             disabled={cleanStatus === 'downloading'}
             className="flex items-center gap-2 px-4 py-2 text-sm flex-shrink-0"
             style={{
-              border: '1px solid rgba(45,212,191,0.4)',
-              color: cleanStatus === 'done' ? '#2dd4bf' : 'rgb(148,163,184)',
+              border: `1px solid ${cleanStatus === 'error' ? 'rgba(239,68,68,0.4)' : 'rgba(45,212,191,0.4)'}`,
+              color: cleanStatus === 'done' ? '#2dd4bf' : cleanStatus === 'error' ? '#ef4444' : 'rgb(148,163,184)',
               borderRadius: '8px',
               background: 'transparent',
               cursor: cleanStatus === 'downloading' ? 'wait' : 'pointer',
             }}
           >
             <Download size={14} />
-            {cleanStatus === 'downloading' ? 'Downloading…' : cleanStatus === 'done' ? 'Downloaded' : 'Download'}
+            {cleanStatus === 'downloading' ? 'Downloading…' : cleanStatus === 'done' ? 'Downloaded' : cleanStatus === 'error' ? 'Failed' : 'Download'}
           </button>
         </div>
+        {cleanStatus === 'error' && (
+          <div className="flex items-start gap-2 px-3 py-2 mb-4 rounded-lg text-xs" style={{ background: 'rgba(239,68,68,0.08)', border: '0.667px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
+            <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+            <span>{cleanError || 'EXE not found on server. Ensure PCMonitorProbeV*.exe is in the downloads/ folder.'}</span>
+          </div>
+        )}
 
         {isAuthenticated ? (
           <div className="p-6" style={cardStyle}>

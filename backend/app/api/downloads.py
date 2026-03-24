@@ -83,3 +83,31 @@ async def build_company_probe(
             "Content-Length": str(len(patched)),
         },
     )
+
+
+@router.get("/probe")
+async def download_probe():
+    """Return the base EXE as-is (no token patching). No auth required."""
+    exe_path = _find_base_exe()
+    if not exe_path:
+        raise HTTPException(
+            status_code=404,
+            detail="Base EXE not found. Place PCMonitorProbeV*.exe into the downloads/ folder.",
+        )
+
+    filename = os.path.basename(exe_path)
+    file_size = os.path.getsize(exe_path)
+
+    def iterfile():
+        with open(exe_path, "rb") as f:
+            while chunk := f.read(65536):
+                yield chunk
+
+    return StreamingResponse(
+        iterfile(),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(file_size),
+        },
+    )
