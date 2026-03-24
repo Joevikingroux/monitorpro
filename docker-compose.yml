@@ -21,6 +21,8 @@ services:
     build: ./backend
     ports:
       - "127.0.0.1:8888:8888"
+    volumes:
+      - ./downloads:/app/downloads:ro
     environment:
       DATABASE_URL: postgresql+asyncpg://pcmonitor:${DB_PASSWORD}@db:5432/pcmonitor
       SECRET_KEY: ${SECRET_KEY}
