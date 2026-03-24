@@ -25,6 +25,7 @@ export default function Downloads() {
   const [status, setStatus] = useState('idle')   // idle | building | done | error | missing
   const [progress, setProgress] = useState(0)
   const [errorMsg, setErrorMsg] = useState('')
+  const [cleanStatus, setCleanStatus] = useState('idle') // idle | downloading | done | error
 
   const { data: companies = [] } = useQuery({
     queryKey: ['companies'],
@@ -101,6 +102,24 @@ export default function Downloads() {
     setErrorMsg('')
   }
 
+  const downloadClean = async () => {
+    setCleanStatus('downloading')
+    try {
+      const response = await fetch('/api/downloads/probe')
+      if (!response.ok) { setCleanStatus('error'); return }
+      const blob = await response.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = 'PCMonitorProbe_Setup.exe'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setCleanStatus('done')
+    } catch {
+      setCleanStatus('error')
+    }
+  }
+
   const isBuilding = status === 'building'
 
   return (
@@ -157,6 +176,29 @@ export default function Downloads() {
           <p className="text-sm mt-1" style={{ color: 'rgb(148,163,184)' }}>
             Select a company to build a customised probe installer with the registration token baked in.
           </p>
+        </div>
+
+        {/* Clean EXE download — always visible */}
+        <div className="p-5 mb-4 flex items-center justify-between gap-4 flex-wrap" style={{ ...cardStyle, border: '0.667px solid rgba(45,212,191,0.1)' }}>
+          <div>
+            <p className="text-sm font-semibold mb-0.5" style={{ color: 'rgb(224,247,250)' }}>Generic installer (no token)</p>
+            <p className="text-xs" style={{ color: 'rgb(148,163,184)' }}>Base EXE — will prompt for company token on first run.</p>
+          </div>
+          <button
+            onClick={downloadClean}
+            disabled={cleanStatus === 'downloading'}
+            className="flex items-center gap-2 px-4 py-2 text-sm flex-shrink-0"
+            style={{
+              border: '1px solid rgba(45,212,191,0.4)',
+              color: cleanStatus === 'done' ? '#2dd4bf' : 'rgb(148,163,184)',
+              borderRadius: '8px',
+              background: 'transparent',
+              cursor: cleanStatus === 'downloading' ? 'wait' : 'pointer',
+            }}
+          >
+            <Download size={14} />
+            {cleanStatus === 'downloading' ? 'Downloading…' : cleanStatus === 'done' ? 'Downloaded' : 'Download'}
+          </button>
         </div>
 
         {isAuthenticated ? (
