@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 
 export default function Login() {
@@ -129,6 +129,24 @@ export default function Login() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        <div style={{ borderTop: '0.667px solid rgba(45,212,191,0.1)', marginTop: '24px', paddingTop: '20px' }}>
+          <Link
+            to="/downloads"
+            className="flex items-center justify-center gap-2 w-full py-3 text-sm font-semibold transition-all"
+            style={{
+              border: '0.667px solid rgba(45,212,191,0.3)',
+              borderRadius: '8px',
+              color: '#2dd4bf',
+              background: 'transparent',
+              textDecoration: 'none',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(45,212,191,0.06)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            ↓ Download Probe Installer
+          </Link>
+        </div>
       </div>
     </div>
   )

@@ -32,6 +32,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/downloads" element={<Downloads />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -39,7 +40,6 @@ export default function App() {
         <Route path="/machines/:id" element={<MachineDetail />} />
         <Route path="/alerts" element={<Alerts />} />
         <Route path="/reports" element={<Reports />} />
-        <Route path="/downloads" element={<Downloads />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>

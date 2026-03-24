@@ -1,10 +1,7 @@
 import os
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-
-from app.core.security import get_current_user
-from app.models.user import User
 
 router = APIRouter(prefix="/api/downloads", tags=["downloads"])
 
@@ -13,9 +10,7 @@ DOWNLOADS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", 
 
 
 @router.get("/probe")
-async def download_probe(
-    current_user: User = Depends(get_current_user),
-):
+async def download_probe():
     """Stream PCMonitorProbe_Setup.exe from the downloads/ directory."""
     # Find any .exe in the downloads dir (picks up versioned filenames too)
     exe_path = None
