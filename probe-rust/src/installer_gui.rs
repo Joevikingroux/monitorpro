@@ -57,6 +57,10 @@ struct InstallerApp {
     existing_server: String,
     existing_company_hint: String,
     existing_running: bool,
+
+    /// True when a token is baked in and install should start automatically
+    /// without showing the Welcome / Configure screens.
+    auto_install: bool,
 }
 
 impl InstallerApp {
@@ -91,10 +95,14 @@ impl InstallerApp {
                 existing_server: cfg.server_url,
                 existing_company_hint: hint,
                 existing_running: running,
+                auto_install: false,
             }
         } else {
+            // If a company token is baked into this EXE, skip the wizard and
+            // install automatically as soon as the first frame renders.
+            let auto_install = !company_token.is_empty();
             Self {
-                page: Page::Welcome,
+                page: if auto_install { Page::Installing } else { Page::Welcome },
                 logo,
                 logo_aspect,
                 server_url,
@@ -108,6 +116,7 @@ impl InstallerApp {
                 existing_server: String::new(),
                 existing_company_hint: String::new(),
                 existing_running: false,
+                auto_install,
             }
         }
     }
@@ -226,6 +235,12 @@ impl InstallerApp {
 
 impl eframe::App for InstallerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Auto-install: baked token present, kick off install on first frame.
+        if self.auto_install && self.rx.is_none() {
+            self.auto_install = false;
+            self.begin_install();
+        }
+
         self.anim_t += ctx.input(|i| i.stable_dt);
 
         // ── Drain progress channel ─────────────────────────────────────────
