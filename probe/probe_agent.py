@@ -407,17 +407,69 @@ def run_standalone():
 
 def run_setup_wizard():
     """Interactive configuration wizard — runs when exe is double-clicked."""
+    # Load existing config (includes embedded_token.txt if present)
+    config, config_path = load_config()
+    existing_url = config.get("server", "url", fallback="https://your-vps.com:8443")
+    existing_token = config.get("server", "company_token", fallback="")
+    existing_ssl = config.getboolean("server", "verify_ssl", fallback=True)
+
+    has_valid_url = existing_url and existing_url != "https://your-vps.com:8443"
+    has_valid_token = existing_token and existing_token != "COMPANY_SPECIFIC_TOKEN_HERE"
+
+    # ── Auto-install mode ────────────────────────────────────────────────────
+    # If a token is already baked in (downloaded from the dashboard), skip the
+    # interactive wizard entirely and go straight to service installation.
+    if has_valid_token and has_valid_url:
+        print()
+        print("=" * 55)
+        print("  Numbers10 PCMonitor Probe — Auto Install")
+        print("=" * 55)
+        print()
+        print(f"  Server : {existing_url}")
+        print(f"  Token  : {existing_token[:8]}...{existing_token[-4:]}")
+        print()
+        print("  Installing service...")
+        try:
+            sys.argv = [sys.argv[0], "install"]
+            win32serviceutil.HandleCommandLine(PCMonitorProbeService)
+        except Exception as e:
+            print(f"  Error: {e}")
+            print("  Make sure you run as Administrator!")
+        print()
+        print("  Starting service...")
+        try:
+            time.sleep(1)
+            win32serviceutil.StartService(SERVICE_NAME)
+            time.sleep(2)
+            status = win32serviceutil.QueryServiceStatus(SERVICE_NAME)
+            if status[1] == 4:
+                print("  Service is running!")
+            else:
+                print("  Service may still be starting...")
+        except Exception as e:
+            print(f"  Could not start service: {e}")
+            print("  Try: net start PCMonitorProbe")
+        print()
+        tray_path = os.path.join(get_base_dir(), "PCMonitorTray.exe")
+        if os.path.exists(tray_path):
+            try:
+                import subprocess
+                subprocess.Popen([tray_path], creationflags=0x00000008)
+                print("  Tray icon started.")
+            except Exception:
+                pass
+        print("=" * 55)
+        print("  Setup complete!")
+        print("=" * 55)
+        input("\n  Press Enter to exit...")
+        return
+    # ── Interactive wizard ───────────────────────────────────────────────────
+
     print()
     print("=" * 55)
     print("  Numbers10 PCMonitor Probe — Setup Wizard")
     print("=" * 55)
     print()
-
-    # Load existing config
-    config, config_path = load_config()
-    existing_url = config.get("server", "url", fallback="https://your-vps.com:8443")
-    existing_token = config.get("server", "company_token", fallback="")
-    existing_ssl = config.getboolean("server", "verify_ssl", fallback=True)
 
     # Step 1: Server URL
     print("  Step 1: Server URL")
@@ -431,7 +483,7 @@ def run_setup_wizard():
 
     # Step 2: Company Token
     print("  Step 2: Company Token")
-    print("    (Copy from the dashboard: Companies > Copy Token)")
+    print("    (Copy from the dashboard: Downloads > select company > Build & Download)")
     if existing_token and existing_token != "COMPANY_SPECIFIC_TOKEN_HERE":
         print(f"    Current: {existing_token[:8]}...{existing_token[-4:]}")
         token = input(f"    Enter token [keep existing]: ").strip()
