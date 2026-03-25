@@ -1,13 +1,9 @@
 /// Install / uninstall with live progress callbacks.
 
 use anyhow::{bail, Context, Result};
-use winreg::enums::{HKEY_CURRENT_USER, KEY_WRITE};
-use winreg::RegKey;
-
 use crate::config::{self, ProbeConfig};
 
-const REGISTRY_RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
-const TRAY_RUN_VALUE: &str = "PCMonitorProbe_Tray";
+const TRAY_TASK_NAME: &str = "PCMonitorProbe_Tray";
 
 pub fn is_installed() -> bool {
     // Only check the service — config file may remain after uninstall (user data)
@@ -137,15 +133,28 @@ where
         ])
         .output();
 
-    progress("Registering tray app at user login...");
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let run_key = hkcu
-        .open_subkey_with_flags(REGISTRY_RUN_KEY, KEY_WRITE)
-        .context("Cannot open HKCU\\Run key")?;
+    progress("Registering tray app at user login (scheduled task)...");
+    // Use a scheduled task instead of HKCU\Run — the installer runs as admin so
+    // HKCU would write to the Administrator hive, not the real user's hive.
+    // /sc ONLOGON with no /ru fires for ANY user that logs on, regardless of who
+    // ran the installer.
     let tray_cmd = format!("\"{}\" --tray", exe_dst.display());
-    run_key
-        .set_value(TRAY_RUN_VALUE, &tray_cmd.as_str())
-        .context("Cannot write Run key")?;
+    let task_out = std::process::Command::new("schtasks.exe")
+        .args([
+            "/Create",
+            "/F",                         // overwrite if already exists
+            "/TN", TRAY_TASK_NAME,
+            "/TR", &tray_cmd,
+            "/SC", "ONLOGON",
+            "/RL", "HIGHEST",             // run with highest available privilege
+            "/DELAY", "0000:10",          // 10-second delay after login (desktop ready)
+        ])
+        .output()
+        .context("Failed to run schtasks")?;
+    if !task_out.status.success() {
+        let msg = String::from_utf8_lossy(&task_out.stderr);
+        bail!("Scheduled task creation failed: {}", msg.trim());
+    }
 
     progress("Creating desktop shortcut...");
     let shortcut_ps = format!(
@@ -219,11 +228,10 @@ where
         progress("  Warning: service marked for deletion on next reboot.");
     }
 
-    progress("Removing tray startup entry from registry...");
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    if let Ok(run_key) = hkcu.open_subkey_with_flags(REGISTRY_RUN_KEY, KEY_WRITE) {
-        let _ = run_key.delete_value(TRAY_RUN_VALUE);
-    }
+    progress("Removing tray startup scheduled task...");
+    let _ = std::process::Command::new("schtasks.exe")
+        .args(["/Delete", "/F", "/TN", TRAY_TASK_NAME])
+        .output();
 
     // Remove desktop shortcut
     let shortcut = std::path::PathBuf::from(
